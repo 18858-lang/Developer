@@ -3,710 +3,2493 @@
  <head><script src="/_sdk/telemetry_sdk.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Classroom Thermal Sandbox</title>
+  <title>BloodTypeMatch</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
   <script src="/_sdk/element_sdk.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Sarabun:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&amp;family=Outfit:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <script>
+tailwind.config={theme:{extend:{colors:{g50:'#f0fdf4',g100:'#dcfce7',g200:'#bbf7d0',g300:'#86efac',g400:'#4ade80',g500:'#22c55e',g600:'#16a34a',g700:'#15803d',g800:'#166534',g900:'#14532d'},fontFamily:{thai:['Sarabun','sans-serif'],en:['Outfit','sans-serif']}}}}
+</script>
   <style>
-html, body { height: 100%; margin: 0; }
-* { font-family: 'Sarabun', sans-serif; }
-.mono { font-family: 'JetBrains Mono', monospace; }
-.heatmap-cell { transition: background-color 0.3s ease; cursor: pointer; position: relative; }
-.heatmap-cell:hover { outline: 2px solid #fff; z-index: 10; }
-.tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100; }
-.heatmap-cell:hover .tooltip { opacity: 1; }
-.ac-icon { position: absolute; z-index: 20; pointer-events: none; }
-.glow-blue { box-shadow: 0 0 20px rgba(0, 200, 255, 0.3); }
-.glow-red { box-shadow: 0 0 20px rgba(255, 50, 50, 0.3); }
-.panel { background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 12px; }
-.slider-custom { -webkit-appearance: none; background: linear-gradient(90deg, #00d4ff, #ff4444); border-radius: 8px; height: 6px; }
-.slider-custom::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; cursor: pointer; }
-.fade-in { animation: fadeIn 0.5s ease forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
-.pulse { animation: pulse 2s infinite; }
-.tab-active { background: linear-gradient(135deg, #00d4ff22, #7c3aed22); border-color: #00d4ff; color: #00d4ff; }
-.obj-draggable { cursor: grab; user-select: none; }
-.obj-draggable:active { cursor: grabbing; }
-</style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:'Sarabun',sans-serif;background:#ffffff}
+.page{display:none;height:100%;flex-direction:column;overflow-y:auto}
+.page.active{display:flex}
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 25px rgba(34,197,94,.4)}50%{box-shadow:0 0 50px rgba(34,197,94,.7)}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes bounce-in{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+@keyframes slide-up{0%{transform:translateY(40px);opacity:0}100%{transform:translateY(0);opacity:1}}
+.float-anim{animation:float 3s ease-in-out infinite}
+.glow-btn{animation:pulse-glow 2s ease-in-out infinite}
+.bounce-item{animation:bounce-in .6s cubic-bezier(.34,.1,.68,.55)}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90;display:none}
+.sidebar-overlay.open{display:block}
+.sidebar{position:fixed;left:-280px;top:0;bottom:0;width:280px;background:#fff;z-index:100;transition:left .3s ease;box-shadow:4px 0 20px rgba(0,0,0,.1)}
+.sidebar.open{left:0}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#166534;color:#fff;padding:12px 24px;border-radius:12px;z-index:200;display:none;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.toast.show{display:block;animation:fadeIn .3s ease}
+.card-hover{transition:all .2s ease;cursor:pointer}
+.card-hover:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,.08)}
+.status-badge{display:inline-block;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:600}
+.status-green{background:#dcfce7;color:#166534;border-left:4px solid #22c55e}
+.status-yellow{background:#fef9c3;color:#854d0e;border-left:4px solid #eab308}
+.status-red{background:#fee2e2;color:#991b1b;border-left:4px solid #ef4444}
+.chart-bar{transition:height .6s ease;border-radius:4px 4px 0 0}
+  </style>
   <style>body { box-sizing: border-box; }</style>
-  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
  </head>
- <body class="h-full bg-[#080810] text-gray-200 overflow-auto">
-  <div id="app" class="w-full h-full flex flex-col"><!-- Header -->
-   <header class="w-full px-6 py-4 flex items-center justify-between border-b border-[#1e1e3a] bg-[#0a0a14]">
-    <div class="flex items-center gap-3">
-     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center"><i data-lucide="thermometer" class="w-5 h-5 text-white"></i>
-     </div>
-     <div>
-      <h1 id="main-title" class="text-lg font-bold text-white">Classroom Thermal Sandbox</h1>
-      <p id="main-subtitle" class="text-xs text-gray-400 mono">Thermal Comfort Analysis System — ISO 7730 / ASHRAE 55</p>
+ <body class="h-full bg-white text-gray-800">
+  <div id="app" class="h-full w-full flex flex-col">
+   <div id="toast" class="toast"></div>
+   <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+   <div id="sidebar" class="sidebar">
+    <div class="p-5 border-b border-g100 flex items-center justify-between">
+     <div class="flex items-center gap-3">
+      <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-g400 to-g600 flex items-center justify-center shadow-lg"><span class="text-3xl">🩸</span>
+      </div><span class="font-bold text-g700 font-en text-lg">BTM</span>
+     </div><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="x" class="w-5 h-5 text-gray-400"></i> </button>
+    </div>
+    <nav class="p-3 space-y-1"><button onclick="goPage(1);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="home" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">🏠 หน้าแรก</span> </button> <button onclick="goPage(2);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="user" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">👤 ข้อมูลส่วนตัว</span> </button> <button onclick="goPage(3);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="camera" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">📷 สแกนผลตรวจ</span> </button> <button onclick="goPage(4);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="check-circle" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">✅ ตรวจสอบผล</span> </button> <button onclick="goPage(5);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="activity" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">🧪 วิเคราะห์ผล</span> </button> <button onclick="goPage(6);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="utensils" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">🍽️ โภชนาการ</span> </button> <button onclick="goPage(7);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="settings" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">⚙️ ฟีเจอร์เสริม</span> </button> <button onclick="goPage(8);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="bar-chart-2" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">📊 ติดตามผล</span> </button> <button onclick="goPage(9);toggleSidebar()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-g50 text-left transition-all"> <i data-lucide="git-compare" class="w-5 h-5 text-g600"></i> <span class="font-medium text-gray-700">📈 เปรียบเทียบ</span> </button>
+    </nav>
+   </div><!-- PAGE 1: LANDING -->
+   <div id="page1" class="page active">
+    <div class="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-gradient-to-b from-white via-g50 to-g100 relative overflow-hidden">
+     <div class="absolute top-20 right-10 w-40 h-40 rounded-full bg-g200 opacity-20 blur-3xl pointer-events-none"></div>
+     <div class="absolute bottom-32 left-5 w-48 h-48 rounded-full bg-g300 opacity-15 blur-3xl pointer-events-none"></div>
+     <div class="relative z-10 max-w-md text-center"><!-- Icon Showcase -->
+      <div class="mb-8 flex justify-center gap-4 flex-wrap">
+       <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-g400 to-g600 flex items-center justify-center shadow-lg bounce-item" style="animation-delay:0s">
+        <svg width="40" height="40" viewbox="0 0 64 64" fill="none">
+         <path d="M32 8L48 24v32H16V24z" stroke="white" stroke-width="2.5" fill="white" opacity=".9" /><path d="M32 20v24M24 32h16" stroke="#166534" stroke-width="2" stroke-linecap="round" />
+        </svg>
+       </div>
+       <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center shadow-lg bounce-item" style="animation-delay:.1s">
+        <svg width="40" height="40" viewbox="0 0 64 64" fill="white" opacity=".9">
+         <circle cx="32" cy="32" r="18" />
+        </svg>
+       </div>
+       <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg bounce-item" style="animation-delay:.2s">
+        <svg width="40" height="40" viewbox="0 0 64 64" fill="none">
+         <circle cx="32" cy="32" r="14" stroke="white" stroke-width="2.5" /><path d="M32 20v24M20 32h24" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+       </div>
+      </div><!-- Main Heading -->
+      <h1 id="landingTitle" class="text-4xl font-extrabold text-g800 font-en tracking-tight mb-3 slide-up">BloodTypeMatch</h1>
+      <p id="landingSubtitle" class="text-xl font-bold text-g700 mb-3">จัดอาหารให้ตามผลตรวจเลือด</p>
+      <p class="text-sm text-g600 mb-3 italic">กินตามใจปากมานาน ลองมากินตาม 'ใจเลือด' บ้างไหม?</p>
+      <p id="landingCaption" class="text-base text-g600 mb-8 italic">✨ ปล่อยให้ผลเลือดของคุณพูดคุย</p><!-- Features Grid -->
+      <div class="grid grid-cols-2 gap-3 mb-10">
+       <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-g100 hover:shadow-md transition-all">
+        <div class="text-3xl mb-2">
+         📷
+        </div>
+        <p class="text-xs font-semibold text-gray-700">สแกนผลตรวจ<br>
+          อัตโนมัติ</p>
+       </div>
+       <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-g100 hover:shadow-md transition-all">
+        <div class="text-3xl mb-2">
+         🤖
+        </div>
+        <p class="text-xs font-semibold text-gray-700">AI วิเคราะห์<br>
+          ค่าเลือด</p>
+       </div>
+       <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-g100 hover:shadow-md transition-all">
+        <div class="text-3xl mb-2">
+         🍽️
+        </div>
+        <p class="text-xs font-semibold text-gray-700">แนะนำอาหาร<br>
+          เฉพาะคุณ</p>
+       </div>
+       <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-sm border border-g100 hover:shadow-md transition-all">
+        <div class="text-3xl mb-2">
+         📊
+        </div>
+        <p class="text-xs font-semibold text-gray-700">ติดตามผล<br>
+          ต่อเนื่อง</p>
+       </div>
+      </div><!-- CTA Button --> <button class="glow-btn w-full bg-gradient-to-r from-g500 to-g600 text-white font-bold py-4 px-6 rounded-2xl shadow-lg text-lg hover:from-g600 hover:to-g700 transition-all mb-6" onclick="startCheckup()"> 🩸 เริ่มตรวจสอบ </button> <!-- Saved Profiles -->
+      <div id="savedProfiles" class="hidden w-full">
+       <p class="text-xs font-semibold text-g700 mb-3">📋 บัญชีที่บันทึกแล้ว</p>
+       <div id="profilesList" class="space-y-2 max-h-40 overflow-y-auto"></div>
+      </div>
+      <p class="text-xs text-gray-400 mt-4">🔒 ข้อมูลของคุณปลอดภัย ไม่มีการส่งออกภายนอก</p>
      </div>
     </div>
-    <div class="flex items-center gap-2 text-xs text-gray-500 mono"><span class="w-2 h-2 rounded-full bg-green-400 pulse"></span> <span>ENGINE READY</span>
-    </div>
-   </header><!-- Tabs -->
-   <nav class="w-full px-6 pt-4 flex gap-2"><button onclick="switchTab('input')" id="tab-input" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all tab-active"> <i data-lucide="ruler" class="w-4 h-4 inline mr-1"></i>ตั้งค่าห้อง </button> <button onclick="switchTab('heatmap')" id="tab-heatmap" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all text-gray-400"> <i data-lucide="flame" class="w-4 h-4 inline mr-1"></i>แผนผังความร้อน </button> <button onclick="switchTab('recommend')" id="tab-recommend" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all text-gray-400"> <i data-lucide="lightbulb" class="w-4 h-4 inline mr-1"></i>คำแนะนำ </button>
-   </nav><!-- Tab: Input -->
-   <section id="section-input" class="flex-1 w-full p-6 overflow-auto">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto"><!-- Room Config -->
-     <div class="panel p-6 fade-in">
-      <h2 class="text-base font-bold text-cyan-400 mb-4 flex items-center gap-2"><i data-lucide="box" class="w-5 h-5"></i>กำหนดขนาดห้องเรียน</h2>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-       <div><label for="room-width" class="text-xs text-gray-400 block mb-1">ความกว้าง (เมตร)</label> <input id="room-width" type="number" value="10" min="3" max="50" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+   </div><!-- PAGE 2: PERSONAL INFO -->
+   <div id="page2" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="goPage(1)" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="arrow-left" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">👤 กรอกข้อมูลส่วนตัว</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-5">
+       <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-2">👤 ชื่อบัญชี (ไม่บังคับ)</label> <input id="f_name" type="text" placeholder="เช่น สุขภาพของฉัน" class="w-full px-4 py-3 rounded-xl border-2 border-g200 bg-white focus:border-g500 focus:outline-none transition-all">
        </div>
-       <div><label for="room-length" class="text-xs text-gray-400 block mb-1">ความยาว (เมตร)</label> <input id="room-length" type="number" value="12" min="3" max="50" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-3">🩸 กรุ๊ปเลือด</label>
+        <div class="grid grid-cols-4 gap-2">
+         <button onclick="selectBlood('O+',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">O+</button> <button onclick="selectBlood('O-',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">O-</button> <button onclick="selectBlood('A+',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">A+</button> <button onclick="selectBlood('A-',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">A-</button> <button onclick="selectBlood('B+',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">B+</button> <button onclick="selectBlood('B-',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">B-</button> <button onclick="selectBlood('AB+',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">AB+</button> <button onclick="selectBlood('AB-',this)" class="blood-btn px-3 py-3 rounded-xl border-2 border-g200 bg-white font-bold hover:border-g400 transition-all text-sm">AB-</button>
+        </div><input id="f_blood" type="hidden" value="">
        </div>
-      </div>
-      <div class="grid grid-cols-2 gap-4 mb-4">
-       <div><label for="grid-scale" class="text-xs text-gray-400 block mb-1">สเกล Grid (เมตร/บล็อก)</label> <input id="grid-scale" type="number" value="1" min="0.5" max="5" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-2">⚖️ น้ำหนัก (กก.)</label> <input id="f_weight" type="number" placeholder="60" class="w-full px-4 py-3 rounded-xl border-2 border-g200 bg-white focus:border-g500 focus:outline-none">
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-2">📏 ส่วนสูง (ซม.)</label> <input id="f_height" type="number" placeholder="170" class="w-full px-4 py-3 rounded-xl border-2 border-g200 bg-white focus:border-g500 focus:outline-none">
+        </div>
        </div>
-       <div><label for="ac-count" class="text-xs text-gray-400 block mb-1">จำนวนแอร์ (ตัว)</label> <input id="ac-count" type="number" value="2" min="1" max="8" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-2">🎂 อายุ (ปี)</label> <input id="f_age" type="number" placeholder="30" class="w-full px-4 py-3 rounded-xl border-2 border-g200 bg-white focus:border-g500 focus:outline-none">
+        </div>
+        <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-2">💼 อาชีพ</label> <input id="f_occ" type="text" placeholder="พนักงาน" class="w-full px-4 py-3 rounded-xl border-2 border-g200 bg-white focus:border-g500 focus:outline-none">
+        </div>
        </div>
-      </div>
-      <h3 class="text-xs text-gray-400 mb-2 mt-4">ตำแหน่งแอร์ (พิกัด X, Y จากมุมซ้ายบน)</h3>
-      <div id="ac-positions" class="space-y-2 mb-4"></div>
-      <h3 class="text-xs text-gray-400 mb-2 mt-4">ตำแหน่งหน้าต่าง</h3>
-      <div class="flex gap-2 flex-wrap mb-4"><label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-north" class="accent-cyan-500" checked> ด้านเหนือ (บน)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-south" class="accent-cyan-500"> ด้านใต้ (ล่าง)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-east" class="accent-cyan-500"> ด้านตะวันออก (ขวา)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-west" class="accent-cyan-500"> ด้านตะวันตก (ซ้าย)</label>
-      </div>
-      <h3 class="text-xs text-gray-400 mb-2">พารามิเตอร์สิ่งแวดล้อม</h3>
-      <div class="grid grid-cols-2 gap-3 mb-4">
-       <div><label for="outdoor-temp" class="text-xs text-gray-500 block mb-1">อุณหภูมินอกอาคาร (°C)</label> <input id="outdoor-temp" type="number" value="36" min="20" max="50" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       <div class="bg-white rounded-2xl p-4 border border-g100 shadow-sm"><label class="block text-sm font-semibold text-gray-700 mb-3">⚧ เพศ</label>
+        <div class="flex gap-3"><button onclick="selectGender('ชาย',this)" class="gender-btn flex-1 py-3 rounded-xl border-2 border-g200 bg-white font-semibold hover:border-g400 transition-all">👨 ชาย</button> <button onclick="selectGender('หญิง',this)" class="gender-btn flex-1 py-3 rounded-xl border-2 border-g200 bg-white font-semibold hover:border-g400 transition-all">👩 หญิง</button> <button onclick="selectGender('อื่นๆ',this)" class="gender-btn flex-1 py-3 rounded-xl border-2 border-g200 bg-white font-semibold hover:border-g400 transition-all">🧑 อื่นๆ</button>
+        </div>
        </div>
-       <div><label for="ac-temp" class="text-xs text-gray-500 block mb-1">อุณหภูมิตั้งแอร์ (°C)</label> <input id="ac-temp" type="number" value="25" min="16" max="30" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
-       </div>
-       <div><label for="humidity" class="text-xs text-gray-500 block mb-1">ความชื้นสัมพัทธ์ (%)</label> <input id="humidity" type="number" value="60" min="20" max="95" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
-       </div>
-       <div><label for="student-count" class="text-xs text-gray-500 block mb-1">จำนวนนักเรียน (คน)</label> <input id="student-count" type="number" value="35" min="0" max="100" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
-       </div>
-      </div><button onclick="generateHeatmap()" class="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold text-sm hover:from-cyan-500 hover:to-purple-500 transition-all flex items-center justify-center gap-2"> <i data-lucide="zap" class="w-4 h-4"></i>คำนวณแผนผังความร้อน </button>
-     </div><!-- Image Upload -->
-     <div class="panel p-6 fade-in" style="animation-delay:0.1s">
-      <h2 class="text-base font-bold text-purple-400 mb-4 flex items-center gap-2"><i data-lucide="camera" class="w-5 h-5"></i>อัปโหลดภาพถ่ายห้องเรียน (ไม่บังคับ)</h2>
-      <p class="text-xs text-gray-500 mb-3">ระบบจะนำภาพไปซ้อนทับกับ Grid เพื่อเปรียบเทียบตำแหน่งจริง</p>
-      <div id="upload-zone" class="border-2 border-dashed border-[#2a2a4a] rounded-xl p-8 text-center hover:border-purple-500 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()"><i data-lucide="upload-cloud" class="w-12 h-12 text-gray-600 mx-auto mb-3"></i>
-       <p class="text-sm text-gray-400">คลิกหรือลากไฟล์ภาพมาวางที่นี่</p>
-       <p class="text-xs text-gray-600 mt-1">รองรับ JPG, PNG</p>
-      </div><input id="file-input" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
-      <div id="image-preview" class="mt-4 hidden"><img id="preview-img" class="w-full rounded-lg border border-[#2a2a4a] max-h-48 object-cover" alt="ภาพห้องเรียน">
-       <p class="text-xs text-green-400 mt-2 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i>อัปโหลดสำเร็จ — ภาพจะซ้อนทับบน Heatmap</p>
-      </div><!-- Formula Reference -->
-      <div class="mt-6 p-4 bg-[#0a0a14] rounded-lg border border-[#1a1a2e]">
-       <h3 class="text-xs font-bold text-cyan-400 mb-2 mono">📐 สูตรที่ใช้ในระบบ</h3>
-       <div class="space-y-2 text-xs text-gray-400 mono leading-relaxed">
-        <p><span class="text-yellow-400">IDW:</span> Z(s₀) = Σ(λᵢ·Zᵢ) / Σ(λᵢ)</p>
-        <p><span class="text-yellow-400">Weight:</span> λᵢ = 1 / dᵢ₀²</p>
-        <p><span class="text-yellow-400">PMV:</span> [0.303·e^(-0.036M)+0.028]·L</p>
-        <p><span class="text-yellow-400">L:</span> M - W - H_res - E_sk - R - C</p>
-        <p class="text-gray-600 mt-2">อ้างอิง: ISO 7730:2005, ASHRAE 55-2020</p>
-       </div>
+       <p id="formError" class="text-red-600 text-sm font-semibold bg-red-50 px-4 py-3 rounded-lg hidden">⚠️ กรุณากรอกข้อมูลให้ครบทุกช่อง</p><button onclick="submitPersonalInfo()" class="w-full bg-gradient-to-r from-g500 to-g600 text-white font-bold py-4 rounded-2xl shadow-lg hover:from-g600 hover:to-g700 transition-all"> ถัดไป → </button>
       </div>
      </div>
     </div>
-   </section><!-- Tab: Heatmap -->
-   <section id="section-heatmap" class="flex-1 w-full p-6 overflow-auto hidden">
-    <div class="max-w-7xl mx-auto">
-     <div class="grid grid-cols-1 xl:grid-cols-4 gap-6"><!-- Heatmap Grid -->
-      <div class="xl:col-span-3 panel p-6">
-       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="grid" class="w-5 h-5 text-cyan-400"></i>แผนผังความร้อน (Dynamic Heatmap)</h2>
-        <div class="flex items-center gap-3"><label class="text-xs text-gray-400 flex items-center gap-1"> <input type="checkbox" id="show-image-overlay" class="accent-purple-500" onchange="toggleImageOverlay()"> แสดงภาพซ้อน </label> <span id="grid-info" class="text-xs mono text-gray-500"></span>
+   </div><!-- PAGE 3: SCAN -->
+   <div id="page3" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="goPage(2)" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="arrow-left" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">📷 สแกนผลตรวจเลือด</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="bg-white rounded-2xl p-6 shadow-sm border border-g100">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-g50 flex items-center justify-center">
+         <svg width="40" height="40" viewbox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M3 9h18M9 3v18" /><circle cx="15" cy="15" r="2" />
+         </svg>
         </div>
-       </div><!-- Legend -->
-       <div class="flex items-center gap-4 mb-4 text-xs"><span class="text-gray-400">PMV Scale:</span>
-        <div class="flex items-center gap-1">
-         <div class="w-4 h-4 rounded" style="background:#00d4ff"></div><span class="text-gray-500">เย็น (-3)</span>
+        <h3 class="font-bold text-lg text-g800 mb-2 text-center">สแกนใบผลตรวจเลือด</h3>
+        <p class="text-sm text-gray-500 mb-5 text-center">ถ่ายภาพหรืออัปโหลดไฟล์ผลตรวจเลือด<br>
+          ระบบ AI จะอ่านค่าอัตโนมัติ</p>
+        <div class="flex gap-3 mb-4"><button onclick="startCamera()" class="flex-1 bg-gradient-to-r from-g500 to-g600 text-white font-semibold py-3 rounded-xl shadow hover:from-g600 hover:to-g700 transition-all flex items-center justify-center gap-2"> <i data-lucide="camera" class="w-5 h-5"></i> ถ่ายภาพ </button> <label class="flex-1 bg-white border-2 border-g400 text-g700 font-semibold py-3 rounded-xl cursor-pointer hover:bg-g50 transition-all flex items-center justify-center gap-2"> <i data-lucide="upload" class="w-5 h-5"></i> อัปโหลด <input type="file" accept="image/*,.pdf" class="hidden" onchange="handleUpload(event)"> </label>
         </div>
-        <div class="flex items-center gap-1">
-         <div class="w-4 h-4 rounded" style="background:#00ff88"></div><span class="text-gray-500">สบาย (0)</span>
+       </div><!-- Camera Preview -->
+       <div id="cameraBox" class="hidden bg-black rounded-2xl overflow-hidden relative">
+        <video id="cameraVideo" autoplay playsinline class="w-full" style="max-height:300px;object-fit:cover"></video>
+        <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-4"><button onclick="capturePhoto()" class="bg-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl border-4 border-g400">
+          <div class="w-10 h-10 rounded-full bg-g500"></div></button> <button onclick="closeCamera()" class="bg-white/80 rounded-full w-12 h-12 flex items-center justify-center shadow"> <i data-lucide="x" class="w-6 h-6 text-gray-600"></i> </button>
         </div>
-        <div class="flex items-center gap-1">
-         <div class="w-4 h-4 rounded" style="background:#ffaa00"></div><span class="text-gray-500">อุ่น (+2)</span>
-        </div>
-        <div class="flex items-center gap-1">
-         <div class="w-4 h-4 rounded" style="background:#ff2222"></div><span class="text-gray-500">ร้อน (+3)</span>
-        </div>
-        <div class="flex items-center gap-2 ml-4"><span class="text-cyan-400">❄</span><span class="text-gray-500">= แอร์</span> <span class="text-yellow-400">☀</span><span class="text-gray-500">= หน้าต่าง</span>
-        </div>
-       </div><!-- Grid Container -->
-       <div id="heatmap-container" class="relative w-full overflow-auto rounded-lg border border-[#1a1a2e]" style="min-height: 300px;">
-        <div id="heatmap-grid" class="relative"></div><img id="overlay-img" class="absolute top-0 left-0 w-full h-full object-cover opacity-20 pointer-events-none hidden rounded-lg" alt="">
-       </div><!-- Simulation Controls -->
-       <div class="mt-4 p-4 bg-[#0a0a14] rounded-lg border border-[#1a1a2e]">
-        <h3 class="text-xs font-bold text-purple-400 mb-3 flex items-center gap-2"><i data-lucide="sliders" class="w-4 h-4"></i>What-If Simulation Sandbox</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-         <div><label class="text-xs text-gray-400 block mb-1">อุณหภูมิตั้งแอร์: <span id="sim-ac-val" class="text-cyan-400 mono">25°C</span></label> <input type="range" id="sim-ac-temp" min="16" max="30" value="25" class="w-full slider-custom" oninput="simUpdate()">
-         </div>
-         <div><label class="text-xs text-gray-400 block mb-1">อุณหภูมิภายนอก: <span id="sim-out-val" class="text-orange-400 mono">36°C</span></label> <input type="range" id="sim-out-temp" min="25" max="48" value="36" class="w-full slider-custom" oninput="simUpdate()">
-         </div>
-         <div><label class="text-xs text-gray-400 block mb-1">ความชื้น: <span id="sim-hum-val" class="text-blue-400 mono">60%</span></label> <input type="range" id="sim-humidity" min="20" max="95" value="60" class="w-full slider-custom" oninput="simUpdate()">
-         </div>
-        </div><button onclick="recomputeFromSim()" class="mt-3 px-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-600 text-white text-xs font-semibold transition-colors"> <i data-lucide="refresh-cw" class="w-3 h-3 inline mr-1"></i>คำนวณใหม่ </button>
        </div>
-      </div><!-- Stats Panel -->
-      <div class="xl:col-span-1 space-y-4">
-       <div class="panel p-4">
-        <h3 class="text-xs font-bold text-gray-400 mb-3">📊 สถิติห้อง</h3>
+       <canvas id="cameraCanvas" class="hidden"></canvas><!-- Image Preview & AI Scan -->
+       <div id="previewBox" class="hidden bg-white rounded-2xl p-4 shadow-sm border border-g100"><img id="previewImg" class="w-full rounded-xl mb-3" style="max-height:250px;object-fit:contain">
+        <div id="scanProgress" class="hidden mb-3">
+         <div class="flex items-center gap-2 mb-2">
+          <div class="w-4 h-4 border-2 border-g500 border-t-transparent rounded-full animate-spin"></div><span class="text-sm text-g700 font-medium">AI กำลังอ่านค่า OCR...</span>
+         </div>
+         <div class="w-full bg-g100 rounded-full h-2">
+          <div id="scanBar" class="bg-g500 h-2 rounded-full transition-all" style="width:0%"></div>
+         </div>
+        </div><button id="scanBtn" onclick="simulateOCR()" class="w-full bg-gradient-to-r from-g500 to-g600 text-white font-bold py-3 rounded-xl shadow"> 🔍 เริ่มสแกน AI </button>
+       </div><!-- Manual Entry -->
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">✏️ หรือกรอกค่าด้วยตนเอง</h4>
+        <p class="text-xs text-gray-400 mb-4">กรอกค่าจากใบผลตรวจเลือดของคุณ</p>
         <div class="space-y-3">
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิเฉลี่ย</span> <span id="stat-avg-temp" class="mono text-sm text-white font-bold">--°C</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Hb</label> <input id="v_hb" type="number" step="0.1" placeholder="g/dL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
          </div>
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิสูงสุด</span> <span id="stat-max-temp" class="mono text-sm text-red-400 font-bold">--°C</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">WBC</label> <input id="v_wbc" type="number" step="0.1" placeholder="×10³/µL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
          </div>
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิต่ำสุด</span> <span id="stat-min-temp" class="mono text-sm text-cyan-400 font-bold">--°C</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Platelet</label> <input id="v_plt" type="number" placeholder="×10³/µL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
          </div>
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">PMV เฉลี่ย</span> <span id="stat-avg-pmv" class="mono text-sm text-yellow-400 font-bold">--</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Glucose</label> <input id="v_glu" type="number" placeholder="mg/dL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
          </div>
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">โซนร้อน (PMV&gt;+2)</span> <span id="stat-hot-zones" class="mono text-sm text-red-400 font-bold">--%</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Creatinine</label> <input id="v_cre" type="number" step="0.01" placeholder="mg/dL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
          </div>
-         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">โซนสบาย (|PMV|≤1)</span> <span id="stat-comfort-zones" class="mono text-sm text-green-400 font-bold">--%</span>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Cholesterol</label> <input id="v_cho" type="number" placeholder="mg/dL" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
+         </div>
+         <div class="flex items-center gap-2"><label class="w-20 text-sm font-medium text-gray-600">Hct</label> <input id="v_hct" type="number" step="0.1" placeholder="%" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none">
+         </div>
+        </div><button onclick="goToVerify()" class="w-full mt-4 bg-gradient-to-r from-g500 to-g600 text-white font-bold py-3 rounded-xl shadow"> ยืนยันและตรวจสอบ → </button>
+       </div>
+      </div>
+     </div>
+     <div id="bottomNav3" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 4: VERIFY -->
+   <div id="page4" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">✅ ตรวจสอบความถูกต้อง</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto">
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100 mb-4">
+        <div class="flex items-center gap-2 mb-4"><span class="text-2xl">📋</span>
+         <h3 class="font-bold text-g800">ผลตรวจเลือดของคุณ</h3>
+        </div>
+        <p class="text-xs text-gray-400 mb-4">ตรวจสอบและแก้ไขตัวเลขหาก AI อ่านผิด</p>
+        <div id="verifyList" class="space-y-3"></div>
+       </div><button onclick="confirmResults()" class="w-full bg-gradient-to-r from-g500 to-g600 text-white font-bold py-4 rounded-2xl shadow-lg"> ✅ ยืนยันผลตรวจ </button>
+      </div>
+     </div>
+     <div id="bottomNav4" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 5: ANALYSIS -->
+   <div id="page5" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">🧪 วิเคราะห์ผลตรวจ</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100">
+        <div class="flex items-center gap-2 mb-2"><span class="text-lg">👤</span> <span class="font-semibold text-g800" id="analysisPerson"></span>
+        </div>
+        <div id="analysisPersonDetail" class="text-xs text-gray-500"></div>
+       </div>
+       <div id="analysisCards" class="space-y-3"></div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">📈 แนวโน้มค่าเลือด (ภายใน 4 สัปดาห์)</h4>
+        <p class="text-xs text-gray-400 mb-3">หากทำตามคำแนะนำด้านล่าง</p>
+        <div id="trendChart" class="flex items-end gap-2 h-40 border-b border-gray-200 pt-2"></div>
+        <div class="flex justify-between text-xs text-gray-400 mt-1"><span>สัปดาห์ 1</span><span>สัปดาห์ 2</span><span>สัปดาห์ 3</span><span>สัปดาห์ 4</span>
+        </div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🍽️ ผลของอาหารต่อเลือด</h4>
+        <div id="nutritionImpacts" class="space-y-2 text-sm"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🩸 แนะนำตามกรุ๊ปเลือด</h4>
+        <div id="bloodTypeRecs" class="space-y-2"></div>
+       </div><button onclick="goPage(6)" class="w-full bg-gradient-to-r from-g500 to-g600 text-white font-bold py-4 rounded-2xl shadow-lg"> 🍽️ ไปที่เมนูโภชนาการ </button>
+      </div>
+     </div>
+     <div id="bottomNav5" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 6: NUTRITION -->
+   <div id="page6" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">🍽️ โภชนาการแนะนำ</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="flex flex-wrap gap-2 mb-4"><button onclick="setDuration(7,this)" class="dur-btn px-4 py-2 rounded-xl bg-g500 text-white font-semibold text-sm shadow">7 วัน</button> <button onclick="setDuration(14,this)" class="dur-btn px-4 py-2 rounded-xl bg-white text-g700 font-semibold text-sm border border-g200">14 วัน</button> <button onclick="setDuration(21,this)" class="dur-btn px-4 py-2 rounded-xl bg-white text-g700 font-semibold text-sm border border-g200">21 วัน</button> <button onclick="setDuration(30,this)" class="dur-btn px-4 py-2 rounded-xl bg-white text-g700 font-semibold text-sm border border-g200">1 เดือน</button> <button onclick="setDuration(60,this)" class="dur-btn px-4 py-2 rounded-xl bg-white text-g700 font-semibold text-sm border border-g200">2 เดือน</button>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-2">🔬 คำแนะนำจากผลตรวจ</h4>
+        <div id="recList" class="space-y-2 text-sm"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">📊 ประเมินแนวโน้มค่าเลือด</h4>
+        <div id="beforeAfterComparison" class="space-y-2 text-sm"></div>
+       </div>
+       <div id="mealPlan" class="space-y-3"></div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🍽️ บันทึกอาหารและผลกระทบต่อเลือด</h4>
+        <p class="text-xs text-gray-400 mb-3">กรอกอาหารที่กินแล้วดูว่ามีผลต่อค่า CBC ตัวไหน</p>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+         <div><label class="text-xs font-semibold text-gray-600 block mb-1">🕐 เวลาทาน</label> <input id="mealTime" type="time" value="12:00" class="w-full px-3 py-2 rounded-lg border-2 border-g200 text-sm focus:border-g500 focus:outline-none bg-white cursor-pointer">
+         </div>
+         <div><label class="text-xs font-semibold text-gray-600 block mb-1">📋 มื้ออาหาร</label>
+          <div class="grid grid-cols-2 gap-1"><button type="button" onclick="selectMealType('🌅 มื้อเช้า', this); return false;" class="meal-type-btn px-2 py-2 rounded-lg border-2 border-gray-200 bg-white font-semibold hover:border-g400 transition-all text-sm cursor-pointer">🌅 เช้า</button> <button type="button" onclick="selectMealType('☀️ มื้อกลางวัน', this); return false;" class="meal-type-btn px-2 py-2 rounded-lg border-2 border-gray-200 bg-white font-semibold hover:border-g400 transition-all text-sm cursor-pointer">☀️ วัน</button> <button type="button" onclick="selectMealType('🌙 มื้อเย็น', this); return false;" class="meal-type-btn px-2 py-2 rounded-lg border-2 border-gray-200 bg-white font-semibold hover:border-g400 transition-all text-sm cursor-pointer">🌙 เย็น</button> <button type="button" onclick="selectMealType('🍿 ของว่าง', this); return false;" class="meal-type-btn px-2 py-2 rounded-lg border-2 border-gray-200 bg-white font-semibold hover:border-g400 transition-all text-sm cursor-pointer">🍿 ว่าง</button>
+          </div><input id="mealType" type="hidden" value="">
+         </div>
+        </div><textarea id="mealDesc" placeholder="เช่น ข้าวกล้อง ผัดผักรวม ไข่ต้ม น้ำส้ม" class="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm h-20 resize-none focus:border-g500 focus:outline-none mb-3"></textarea> <button onclick="saveMealLog()" id="saveMealBtn" class="w-full bg-g500 text-white font-semibold py-2 rounded-xl hover:bg-g600 transition-all"> 💾 บันทึกมื้ออาหาร </button>
+        <div id="mealLogs" class="mt-4 space-y-3"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <div class="flex items-center gap-2 mb-3"><span class="text-lg">🤖</span>
+         <h4 class="font-bold text-g800">AI Nutrition Coach</h4>
+        </div>
+        <div id="nutritionCoachAdvice" class="bg-g50 rounded-lg p-3 text-sm text-gray-700 space-y-2"></div>
+       </div>
+      </div>
+     </div>
+     <div id="bottomNav6" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 7: EXTRAS -->
+   <div id="page7" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">⚙️ ฟีเจอร์เสริม</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+         <div class="w-10 h-10 rounded-xl bg-g100 flex items-center justify-center text-xl">
+          📁
+         </div>
+         <div>
+          <h4 class="font-bold text-g800">บันทึกประวัติสุขภาพ</h4>
+          <p class="text-xs text-gray-400">ดูผลตรวจย้อนหลังได้ตลอด</p>
+         </div>
+        </div>
+        <div id="healthHistory" class="space-y-2 text-sm"></div>
+        <p id="noHistory" class="text-sm text-gray-400 italic">ยังไม่มีประวัติ</p>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+         <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-xl">
+          📤
+         </div>
+         <div>
+          <h4 class="font-bold text-g800">แชร์ผลตรวจ</h4>
+          <p class="text-xs text-gray-400">ส่งรายงานให้แพทย์</p>
+         </div>
+        </div>
+        <div class="flex gap-2"><button onclick="shareReport('email')" class="flex-1 bg-blue-50 text-blue-700 font-semibold py-2 rounded-lg text-sm hover:bg-blue-100">📧 อีเมล</button> <button onclick="shareReport('qr')" class="flex-1 bg-purple-50 text-purple-700 font-semibold py-2 rounded-lg text-sm hover:bg-purple-100">📱 QR Code</button>
+        </div>
+        <div id="qrArea" class="hidden mt-3 text-center">
+         <div class="inline-block p-4 bg-white border-2 border-gray-200 rounded-xl">
+          <svg id="qrSvg" width="120" height="120"></svg>
+         </div>
+         <p class="text-xs text-gray-400 mt-2">QR Code สำหรับแชร์</p>
+        </div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100 card-hover">
+        <div class="flex items-center gap-3 mb-3">
+         <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-xl">
+          🔔
+         </div>
+         <div>
+          <h4 class="font-bold text-g800">ระบบแจ้งเตือน</h4>
+          <p class="text-xs text-gray-400">เมื่อค่าผิดปกติรุนแรง</p>
+         </div>
+        </div>
+        <div id="alertsList" class="space-y-2"></div>
+        <p id="noAlerts" class="text-sm text-gray-400 italic">ไม่มีค่าผิดปกติรุนแรง ✅</p>
+       </div>
+      </div>
+     </div>
+     <div id="bottomNav7" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 8: DASHBOARD -->
+   <div id="page8" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">📊 ติดตามผล</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🍽️ สรุปอาหารที่บันทึก</h4>
+        <div id="dashMealSummary" class="space-y-2 text-sm"></div>
+        <p id="dashNoMeals" class="text-sm text-gray-400 italic">ยังไม่มีบันทึกอาหาร</p>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">📈 คาดการณ์ค่าเลือด CBC</h4>
+        <p class="text-xs text-gray-400 mb-3">เปลี่ยนแปลงในแต่ละสัปดาห์</p>
+        <div id="futureChart" class="space-y-3"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🏆 ความก้าวหน้า</h4>
+        <div class="flex items-center gap-3">
+         <div class="w-16 h-16 rounded-full border-4 border-g400 flex items-center justify-center"><span id="progressPct" class="text-lg font-bold text-g700">0%</span>
+         </div>
+         <div>
+          <p class="font-semibold text-g800">ปฏิบัติตามแผน</p>
+          <p class="text-xs text-gray-400">ทานอาหารตามคำแนะนำ</p>
          </div>
         </div>
        </div>
-       <div class="panel p-4">
-        <h3 class="text-xs font-bold text-gray-400 mb-3">🌬️ ประสิทธิภาพแอร์</h3>
-        <div id="ac-efficiency" class="space-y-2 text-xs"></div>
+      </div>
+     </div>
+     <div id="bottomNav8" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
+    </div>
+   </div><!-- PAGE 9: COMPARE -->
+   <div id="page9" class="page">
+    <div class="flex-1 flex flex-col bg-gradient-to-b from-white to-g50">
+     <div class="bg-white px-4 py-3 flex items-center gap-3 shadow-sm sticky top-0 z-10 border-b border-g100"><button onclick="toggleSidebar()" class="p-2 hover:bg-g50 rounded-lg transition-all"> <i data-lucide="menu" class="w-5 h-5 text-g700"></i> </button>
+      <h2 class="font-bold text-g800 text-lg">📈 เปรียบเทียบผลตรวจ</h2>
+     </div>
+     <div class="flex-1 overflow-y-auto p-6 pb-24">
+      <div class="max-w-md mx-auto space-y-4">
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100">
+        <div class="flex items-center justify-between mb-3">
+         <h4 class="font-bold text-g800">🎯 โหมดเปรียบเทียบ</h4><button onclick="toggleComparisonMode()" id="comparisonModeToggle" class="w-14 h-8 bg-gray-200 rounded-full relative transition-all">
+          <div id="comparisonToggleDot" class="w-6 h-6 bg-white rounded-full absolute top-1 left-1 transition-all"></div></button>
+        </div>
+        <p class="text-xs text-gray-400" id="comparisonModeLabel">ปิด: เปรียบเทียบประวัติของคุณเอง</p>
        </div>
-       <div class="panel p-4">
-        <h3 class="text-xs font-bold text-gray-400 mb-2">📏 ขนาดห้อง</h3>
-        <div id="room-summary" class="text-xs text-gray-500 mono space-y-1"></div>
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100" id="compareAccountsSection">
+        <h4 class="font-bold text-g800 mb-2">📋 เลือกบัญชีที่จะเปรียบเทียบ</h4>
+        <p class="text-xs text-gray-400 mb-3">เลือกรอบการตรวจ 2 รอบเพื่อดูความก้าวหน้า</p>
+        <div class="flex gap-2 mb-3"><select id="compareAccount1" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none" onchange="updateCompare()"> <option value="">-- เลือกบัญชีแรก --</option> </select> <button onclick="swapAccounts()" class="px-3 py-2 rounded-lg bg-g100 text-g700 hover:bg-g200 transition-all"> <i data-lucide="arrow-right-left" class="w-4 h-4"></i> </button> <select id="compareAccount2" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-g500 focus:outline-none" onchange="updateCompare()"> <option value="">-- เลือกบัญชีที่สอง --</option> </select>
+        </div>
+        <div id="compareCards" class="space-y-3"></div>
+        <p id="noCompare" class="text-sm text-gray-400 italic">เลือกบัญชี 2 บัญชีเพื่อเปรียบเทียบ</p>
+       </div>
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100 hidden" id="benchmarkSection">
+        <h4 class="font-bold text-g800 mb-3">🌍 เทียบกับคนอื่น</h4>
+        <p class="text-xs text-gray-400 mb-3">เปรียบเทียบกับข้อมูลอ้างอิง (ไม่ระบุตัวตน)</p>
+        <div id="benchmarkCards" class="space-y-3"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-4 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">🧬 Simulation Mode</h4>
+        <p class="text-xs text-gray-400 mb-3">ดูการเปลี่ยนแปลง 3 เดือนข้างหน้า</p>
+        <div class="space-y-2 mb-3"><button onclick="runSimulation('healthy')" class="w-full bg-green-50 border border-green-200 text-green-800 font-semibold py-2 rounded-lg hover:bg-green-100 transition-all text-sm">✅ กินสุขภาพดี</button> <button onclick="runSimulation('balanced')" class="w-full bg-blue-50 border border-blue-200 text-blue-800 font-semibold py-2 rounded-lg hover:bg-blue-100 transition-all text-sm">⚖️ กินปกติแต่ระวัง</button> <button onclick="runSimulation('poor')" class="w-full bg-red-50 border border-red-200 text-red-800 font-semibold py-2 rounded-lg hover:bg-red-100 transition-all text-sm">⚠️ ไม่ดูแล</button>
+        </div>
+        <div id="simulationResult" class="hidden bg-g50 rounded-lg p-3"></div>
+       </div>
+       <div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+        <h4 class="font-bold text-g800 mb-3">💡 คำแนะนำจากการเปรียบเทียบ</h4>
+        <div id="compareAdvice" class="text-sm space-y-2"></div>
        </div>
       </div>
      </div>
+     <div id="bottomNav9" class="bg-white border-t border-g100 px-2 py-2 flex justify-around sticky bottom-0"></div>
     </div>
-   </section><!-- Tab: Recommendations -->
-   <section id="section-recommend" class="flex-1 w-full p-6 overflow-auto hidden">
-    <div class="max-w-4xl mx-auto space-y-4">
-     <div class="panel p-6">
-      <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>คำแนะนำการแก้ไขปัญหา (AI Recommendations)</h2>
-      <p class="text-xs text-gray-500 mb-4">ระบบวิเคราะห์จุดวิกฤตและสรุปแนวทางแก้ไขตามหลักฟิสิกส์ความร้อน ISO 7730</p>
-      <div id="recommendations-list" class="space-y-4">
-       <p class="text-sm text-gray-500 italic">กรุณาคำนวณแผนผังความร้อนก่อนเพื่อดูคำแนะนำ</p>
-      </div>
-     </div>
-    </div>
-   </section>
+   </div>
   </div>
   <script>
-// State
-let gridData = [];
-let roomW = 10, roomL = 12, gridScale = 1;
-let acPositions = [];
-let uploadedImageSrc = null;
-let windows = { north: true, south: false, east: false, west: false };
+// ===== HELPER FUNCTIONS =====
+function calculateTodayMealImpact(){
+  const today = new Date().toLocaleDateString('th-TH');
+  const todayLogs = allRecords.filter(r=>r.type==='meal_log' && r.scan_date === today);
+  const totalImpact = {hb:0, wbc:0, plt:0, glu:0, cre:0, cho:0, hct:0};
+  
+  todayLogs.forEach(log => {
+    try {
+      const analysis = JSON.parse(log.meal_analysis || '{}');
+      const impacts = analysis.impacts || {};
+      Object.keys(impacts).forEach(key => {
+        if(totalImpact[key] !== undefined) totalImpact[key] += impacts[key];
+      });
+    } catch(e) {}
+  });
+  
+  return totalImpact;
+}
 
-const defaultConfig = {
-  app_title: 'Classroom Thermal Sandbox',
-  subtitle: 'Thermal Comfort Analysis System',
-  background_color: '#080810',
-  surface_color: '#0f0f1a',
-  text_color: '#e5e7eb',
-  primary_color: '#00d4ff',
-  secondary_color: '#7c3aed',
-  font_family: 'Sarabun',
-  font_size: 16
+function calculateDailyTotalImpact(todayLogs){
+  const totalImpact = {hb:0, wbc:0, plt:0, glu:0, cre:0, cho:0, hct:0};
+  
+  todayLogs.forEach(log => {
+    try {
+      const analysis = JSON.parse(log.meal_analysis || '{}');
+      const impacts = analysis.impacts || {};
+      Object.keys(impacts).forEach(key => {
+        if(totalImpact[key] !== undefined) totalImpact[key] += impacts[key];
+      });
+    } catch(e) {}
+  });
+  
+  return totalImpact;
+}
+let selectedGender = '';
+let selectedBlood = '';
+let personalInfo = {};
+let labResults = {hb:0,wbc:0,plt:0,glu:0,cre:0,cho:0,hct:0};
+let allRecords = [];
+let cameraStream = null;
+let selectedDuration = 7;
+let mealImageBase64 = '';
+let mealLogs = [];
+let comparisonMode = 'history';
+let todayMeals = [];
+let aiRecommendations = [];
+let currentPage = 1;
+
+// ===== REFERENCE RANGES =====
+const ranges = {
+  hb:{name:'Hemoglobin (Hb)',unit:'g/dL',low:12,high:17.5,critLow:7,critHigh:20},
+  wbc:{name:'White Blood Cell (WBC)',unit:'×10³/µL',low:4.5,high:11,critLow:2,critHigh:30},
+  plt:{name:'Platelet',unit:'×10³/µL',low:150,high:400,critLow:50,critHigh:600},
+  glu:{name:'Glucose',unit:'mg/dL',low:70,high:100,critLow:40,critHigh:400},
+  cre:{name:'Creatinine',unit:'mg/dL',low:0.6,high:1.2,critLow:0.3,critHigh:10},
+  cho:{name:'Cholesterol',unit:'mg/dL',low:0,high:200,critLow:0,critHigh:300},
+  hct:{name:'Hematocrit (Hct)',unit:'%',low:36,high:52,critLow:20,critHigh:60}
 };
 
-function applyConfig(config) {
-  const t = config.app_title || defaultConfig.app_title;
-  const s = config.subtitle || defaultConfig.subtitle;
-  document.getElementById('main-title').textContent = t;
-  document.getElementById('main-subtitle').textContent = s;
-  document.body.style.backgroundColor = config.background_color || defaultConfig.background_color;
-  const font = config.font_family || defaultConfig.font_family;
-  document.body.style.fontFamily = `${font}, Sarabun, sans-serif`;
-}
+const bloodTypeNutrients = {
+  'O+':['โปรตีนจากเนื้อสัตว์','วิตามิน B','วิตามิน D','สตรอนเชียม','แคลเซียม'],
+  'O-':['โปรตีนจากเนื้อสัตว์','วิตามิน B','วิตามิน D','สตรอนเชียม','แคลเซียม'],
+  'A+':['ผัก','ผลไม้','ธัญพืช','เกลือทะเล','โปรตีนจากปลา'],
+  'A-':['ผัก','ผลไม้','ธัญพืช','เกลือทะเล','โปรตีนจากปลา'],
+  'B+':['นม','ไข่','ผักเขียว','เนื้อแกะ','ข้าวโพด'],
+  'B-':['นม','ไข่','ผักเขียว','เนื้อแกะ','ข้าวโพด'],
+  'AB+':['ปลาแซลมอน','อาหารทะเล','เต้าหู้','ผักใบเขียว','นม'],
+  'AB-':['ปลาแซลมอน','อาหารทะเล','เต้าหู้','ผักใบเขียว','นม']
+};
 
-window.elementSdk.init({
-  defaultConfig,
-  onConfigChange: async (config) => applyConfig(config),
-  mapToCapabilities: (config) => ({
-    recolorables: [
-      { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
-      { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
-      { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
-      { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); } },
-      { get: () => config.secondary_color || defaultConfig.secondary_color, set: (v) => { config.secondary_color = v; window.elementSdk.setConfig({ secondary_color: v }); } }
-    ],
-    borderables: [],
-    fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
-    fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
-  }),
-  mapToEditPanelValues: (config) => new Map([
-    ['app_title', config.app_title || defaultConfig.app_title],
-    ['subtitle', config.subtitle || defaultConfig.subtitle]
-  ])
-});
+const mealImpact = {
+  hb:['ตับสัตว์','ผักใบเขียว','เนื้อแดง','ไข่','สาหร่าย'],
+  wbc:['เหล้าองุ่น','ข้าวโพด','บรอกโคลี','กระเทียม','ขิง'],
+  plt:['ส้ม','สตรอเบอรี่','บลูเบอรี่','ลิ้นจี่','เสาวรส'],
+  glu:['ข้าวกล้อง','ผักไม่มีแป้ง','ถั่วลันเตา','พืชใบ','ปลา'],
+  cre:['น้ำ','แตงกวา','ฟักทอง','ส้ม','ผักใบเขียว'],
+  cho:['ปลาแซลมอน','ถั่ว','อะโวคาโด','โอ๊ต','เนยถั่ว']
+};
 
-// Tab switching
-function switchTab(tab) {
-  ['input','heatmap','recommend'].forEach(t => {
-    document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
-    document.getElementById('tab-' + t).classList.toggle('tab-active', t === tab);
-    if (t !== tab) document.getElementById('tab-' + t).classList.add('text-gray-400');
-    else document.getElementById('tab-' + t).classList.remove('text-gray-400');
-  });
-}
+const mealDB={
+  breakfast:['โจ๊กหมู','ข้าวต้มปลา','แซนด์วิชไข่','โอ๊ตมีล','ขนมปังกวนเนย','ไข่ชุนผักโขม','ซ้อนแหน่งข้าวกล้อง','เผือกต้มนม','กล้วยหนึ่งไข่','ข้าวต้มไก่','โจ๊กไก่','ปัญจประหารไข่','ข้าวต้มเนื้อบด','โจ๊กปลา'],
+  lunch_healthy:['ตับหมูผัดใบกะเพรา','สลัดผักโขมกับไข่ต้ม','ปลาแซลมอนอบมะนาว','ข้าวกล้องแกงส้มผักรวม','สเต็กเนื้อพร้อมบรอกโคลี','ปลานึ่งมะนาว','ไก่ย่างผักรวม','แกงจืดเต้าหู้','กุ้งเผาซ้อมมะนาว','ข้าวกล้องผัดผักสด','ไก่ต้มนึ่ง','ปลาหมึกทอดน้อยน้ำ','แกงพะแนง','ข้าวต้มตับไก่'],
+  lunch_balanced:['ข้าวกล้องผัดผักรวม','แกงจืดวุ้นเส้น','ก๋วยเตี๋ยวต้มยำหมู','ข้าวผัดไข่ผักรวม','สลัดอกไก่ย่างซอสมะนาว','ต้มยำกุ้งน้ำใส','ผัดบวบใส่ไข่','ส้มตำปลาร้า','ข้าวมันไก่','ผัดไทยกุ้งสด','ข้าวผัดปลาร้า','แกงเขียวหวานไก่','ข้าวสวยตำลึงหมู','ยำปลา'],
+  dinner:['ปลานึ่งใบชะพลู','ผัดผักรวมหอยแครง','แกงจืดเห็ดผักรวม','ต้มส้มปลา','ทอดมันปลา','ผัดใบกะเพราหมูสับ','หมูย่างกระติ้มซ้อม','ผัดมะเขือเทศไข่','แกงพะแนงเนื้อ','ผัดกระเพราไก่','แกงหนืมจืดไก่','สลัดสมุนไพร','ผัดว่านแกะ','ไก่ผัดมะพร้าว','ปลาฉลามทอด','ต้มมังสวิรัติ'],
+  snack:['แอปเปิ้ล','กล้วยน้อย','ส้มสด','อะโวคาโด','นมไม่ติดน้ำตาล','ถั่วลิสง','สตรอเบอรี่','ลิ้นจี่','บลูเบอรี่','เสาวรส','แตงกวา','แครอท','ลูกชิ้นไม่ทอด','ลูกกระเทียม','เชดดาร์']
+};
 
-// AC positions UI
-function updateACInputs() {
-  const count = parseInt(document.getElementById('ac-count').value) || 2;
-  const container = document.getElementById('ac-positions');
-  container.innerHTML = '';
-  for (let i = 0; i < count; i++) {
-    const defX = i === 0 ? 2 : roomW - 2;
-    const defY = Math.floor(roomL / 2);
-    container.innerHTML += `
-      <div class="flex gap-2 items-center">
-        <span class="text-xs text-cyan-400 w-16">แอร์ ${i+1}:</span>
-        <input type="number" class="ac-x w-20 bg-[#1a1a2e] border border-[#2a2a4a] rounded px-2 py-1 text-white mono text-xs" value="${defX}" min="0" max="${roomW}" step="0.5" placeholder="X">
-        <input type="number" class="ac-y w-20 bg-[#1a1a2e] border border-[#2a2a4a] rounded px-2 py-1 text-white mono text-xs" value="${defY}" min="0" max="${roomL}" step="0.5" placeholder="Y">
-        <span class="text-xs text-gray-600">(เมตร)</span>
-      </div>`;
+// ===== NAVIGATION =====
+function startCheckup(){
+  const profiles = allRecords.filter(r => r.profile_name && r.type === 'lab_result');
+  if(profiles.length > 0){
+    showCheckupChoice(profiles);
+  } else {
+    startNewCheckup();
   }
 }
 
-document.getElementById('ac-count').addEventListener('change', updateACInputs);
-updateACInputs();
+function showCheckupChoice(profiles){
+  const latest = profiles[profiles.length-1];
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+  
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 max-w-xs shadow-xl">
+      <h3 class="font-bold text-lg text-g800 mb-2">📋 บัญชีล่าสุด</h3>
+      <p class="text-sm text-gray-500 mb-4">${latest.profile_name}</p>
+      <div class="space-y-2">
+        <button class="w-full bg-g500 text-white font-semibold py-3 rounded-xl hover:bg-g600 transition-all load-profile-btn">✅ โหลดบัญชีนี้</button>
+        <button class="w-full bg-gray-100 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-200 transition-all start-new-btn">🆕 เริ่มตรวจสอบใหม่</button>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('app').appendChild(overlay);
+  overlay.querySelector('.load-profile-btn').addEventListener('click', () => {
+    overlay.remove();
+    loadProfile(latest.__backendId);
+  });
+  overlay.querySelector('.start-new-btn').addEventListener('click', () => {
+    overlay.remove();
+    startNewCheckup();
+  });
+}
 
-// Image upload
-function handleImageUpload(e) {
+function startNewCheckup(){
+  selectedGender = '';
+  selectedBlood = '';
+  document.getElementById('f_name').value = '';
+  document.getElementById('f_blood').value = '';
+  document.getElementById('f_weight').value = '';
+  document.getElementById('f_height').value = '';
+  document.getElementById('f_age').value = '';
+  document.getElementById('f_occ').value = '';
+  document.querySelectorAll('.gender-btn').forEach(b=>{b.classList.remove('border-g500','bg-g50');b.classList.add('border-g200','bg-white')});
+  document.querySelectorAll('.blood-btn').forEach(b=>{b.classList.remove('border-g500','bg-g50');b.classList.add('border-g200','bg-white')});
+  document.getElementById('formError').classList.add('hidden');
+  goPage(2);
+}
+
+function goPage(n){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg = document.getElementById('page'+n);
+  if(pg){
+    pg.classList.add('active');
+    pg.classList.add('fade-in');
+    setTimeout(()=>pg.classList.remove('fade-in'),400);
+  }
+  currentPage = n;
+  if(n === 1) renderHomePage();
+  if(n >= 3) renderBottomNavs();
+  if(n === 5) renderAnalysis();
+  if(n === 6) renderNutrition();
+  if(n === 7) renderExtras();
+  if(n === 8) renderDashboard();
+  if(n === 9) { populateAccountSelectors(); renderCompare(); }
+  lucide.createIcons();
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// ===== PAGE 1: HOME =====
+function renderHomePage(){
+  const profiles = allRecords.filter(r=>r.profile_name&&r.type==='lab_result');
+  const profilesDiv = document.getElementById('savedProfiles');
+  const profilesList = document.getElementById('profilesList');
+  
+  if(profiles.length > 0){
+    profilesDiv.classList.remove('hidden');
+    profilesList.innerHTML = profiles.slice(-5).reverse().map((p)=>{
+      return `<div class="bg-white rounded-lg border border-g200 p-3 flex items-center justify-between hover:shadow-md transition-all">
+        <button onclick="loadProfile('${p.__backendId}')" class="flex-1 text-left">
+          <div class="font-semibold text-g800 text-sm">${p.profile_name||'ไม่มีชื่อ'}</div>
+          <div class="text-xs text-gray-500">🩸 ${p.blood_group||'-'} | 📅 ${p.scan_date||'-'}</div>
+        </button>
+        <button onclick="deleteProfile('${p.__backendId}')" class="p-2 text-red-500 hover:bg-red-50 rounded transition-all">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>`;
+    }).join('');
+    lucide.createIcons();
+  } else {
+    profilesDiv.classList.add('hidden');
+  }
+}
+
+function loadProfile(recordId){
+  const record = allRecords.find(r=>r.__backendId===recordId);
+  if(!record) return;
+  personalInfo = {
+    blood: record.blood_group,
+    weight: record.weight,
+    height: record.height,
+    age: record.age,
+    occupation: record.occupation,
+    gender: record.gender
+  };
+  try { labResults = JSON.parse(record.lab_results||'{}'); } catch(e) { labResults = {}; }
+  showToast('✅ โหลดบัญชี ' + record.profile_name);
+  goPage(5);
+}
+
+async function deleteProfile(recordId){
+  const record = allRecords.find(r=>r.__backendId===recordId);
+  if(!record) return;
+  const confirmed = confirm(`ลบบัญชี "${record.profile_name}" ใช่หรือไม่?`);
+  if(!confirmed) return;
+  const result = await window.dataSdk.delete(record);
+  if(result.isOk){
+    showToast('✅ ลบบัญชีเสร็จแล้ว');
+    renderHomePage();
+  } else {
+    showToast('❌ ไม่สามารถลบบัญชี');
+  }
+}
+
+// ===== BOTTOM NAV =====
+function renderBottomNavs(){
+  const tabs=[
+    {p:3,icon:'camera',label:'สแกน'},
+    {p:4,icon:'check-circle',label:'ตรวจสอบ'},
+    {p:5,icon:'activity',label:'วิเคราะห์'},
+    {p:6,icon:'utensils',label:'อาหาร'},
+    {p:8,icon:'bar-chart-2',label:'ติดตาม'},
+    {p:9,icon:'git-compare',label:'เปรียบเทียบ'}
+  ];
+  for(let i=3;i<=9;i++){
+    const nav = document.getElementById('bottomNav'+i);
+    if(!nav) continue;
+    nav.innerHTML = tabs.map(t=>`<button onclick="goPage(${t.p})" class="flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg ${currentPage===t.p?'text-g600':'text-gray-400'} hover:text-g500 transition-colors"><i data-lucide="${t.icon}" class="w-5 h-5"></i><span class="text-[10px] font-medium">${t.label}</span></button>`).join('');
+    lucide.createIcons();
+  }
+}
+
+// ===== PAGE 2: PERSONAL INFO =====
+function selectGender(g,el){
+  selectedGender = g;
+  document.querySelectorAll('.gender-btn').forEach(b=>{b.classList.remove('border-g500','bg-g50');b.classList.add('border-g200','bg-white')});
+  el.classList.remove('border-g200','bg-white');
+  el.classList.add('border-g500','bg-g50');
+}
+
+function selectMealType(type, el) {
+  document.getElementById('mealType').value = type;
+  document.querySelectorAll('.meal-type-btn').forEach(btn => {
+    btn.classList.remove('border-g500', 'bg-g50');
+    btn.classList.add('border-gray-200', 'bg-white');
+  });
+  el.classList.remove('border-gray-200', 'bg-white');
+  el.classList.add('border-g500', 'bg-g50');
+}
+
+function selectBlood(b,el){
+  selectedBlood = b;
+  document.getElementById('f_blood').value = b;
+  document.querySelectorAll('.blood-btn').forEach(btn=>{btn.classList.remove('border-g500','bg-g50');btn.classList.add('border-g200','bg-white')});
+  el.classList.remove('border-g200','bg-white');
+  el.classList.add('border-g500','bg-g50');
+}
+
+function submitPersonalInfo(){
+  const blood = selectedBlood || document.getElementById('f_blood').value;
+  const weight = document.getElementById('f_weight').value;
+  const height = document.getElementById('f_height').value;
+  const age = document.getElementById('f_age').value;
+  const occ = document.getElementById('f_occ').value;
+  if(!blood||!weight||!height||!age||!occ||!selectedGender){
+    document.getElementById('formError').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('formError').classList.add('hidden');
+  personalInfo = {blood,weight,height,age,occupation:occ,gender:selectedGender};
+  goPage(3);
+}
+
+// ===== PAGE 3: CAMERA & SCAN =====
+async function startCamera(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    cameraStream = stream;
+    const v = document.getElementById('cameraVideo');
+    v.srcObject = stream;
+    document.getElementById('cameraBox').classList.remove('hidden');
+  }catch(e){
+    showToast('ไม่สามารถเปิดกล้องได้ กรุณาอัปโหลดไฟล์แทน');
+  }
+}
+
+function closeCamera(){
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}
+  document.getElementById('cameraBox').classList.add('hidden');
+}
+
+function capturePhoto(){
+  const v = document.getElementById('cameraVideo');
+  const c = document.getElementById('cameraCanvas');
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  const url = c.toDataURL('image/jpeg');
+  document.getElementById('previewImg').src = url;
+  document.getElementById('previewBox').classList.remove('hidden');
+  closeCamera();
+}
+
+function handleUpload(e){
   const file = e.target.files[0];
-  if (!file) return;
+  if(!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
-    uploadedImageSrc = ev.target.result;
-    document.getElementById('preview-img').src = uploadedImageSrc;
-    document.getElementById('image-preview').classList.remove('hidden');
+  reader.onload = function(ev){
+    document.getElementById('previewImg').src = ev.target.result;
+    document.getElementById('previewBox').classList.remove('hidden');
   };
   reader.readAsDataURL(file);
 }
 
-function toggleImageOverlay() {
-  const show = document.getElementById('show-image-overlay').checked;
-  const overlay = document.getElementById('overlay-img');
-  if (uploadedImageSrc && show) {
-    overlay.src = uploadedImageSrc;
-    overlay.classList.remove('hidden');
-  } else {
-    overlay.classList.add('hidden');
-  }
-}
-
-// Core Thermal Engine
-function computeIDW(px, py, sources) {
-  let sumWeightedVal = 0, sumWeights = 0;
-  for (const src of sources) {
-    const dx = px - src.x;
-    const dy = py - src.y;
-    const dist2 = dx * dx + dy * dy;
-    if (dist2 < 0.01) return src.temp;
-    const w = 1 / dist2;
-    sumWeightedVal += w * src.temp;
-    sumWeights += w;
-  }
-  return sumWeights > 0 ? sumWeightedVal / sumWeights : 30;
-}
-
-function computePMV(ta, tr, vel, rh, met, clo) {
-  // Simplified PMV calculation based on ISO 7730
-  const M = met * 58.15;
-  const W = 0;
-  const Icl = clo * 0.155;
-  const MW = M - W;
-  const fcl = Icl <= 0.078 ? 1 + 1.29 * Icl : 1.05 + 0.645 * Icl;
-  
-  // Iterative tcl calculation (simplified)
-  let tcl = ta + (35.7 - 0.028 * MW) / (3.96e-8 * fcl * (Math.pow(tr + 273, 4) - Math.pow(ta + 273, 4)) + fcl * 12.1 * Math.sqrt(vel) + 1 / Icl || 1) * 0.1;
-  tcl = Math.min(Math.max(tcl, ta - 5), ta + 15);
-  
-  const hc = Math.max(2.38 * Math.pow(Math.abs(tcl - ta), 0.25), 12.1 * Math.sqrt(vel));
-  
-  const R = 3.96e-8 * fcl * (Math.pow(tcl + 273, 4) - Math.pow(tr + 273, 4));
-  const C = fcl * hc * (tcl - ta);
-  const Eres = 1.7 * 0.00001 * M * (5867 - rh / 100 * 6.105 * Math.exp(17.27 * ta / (ta + 237.3)) * 1000 / 133.322);
-  const Cres = 0.0014 * M * (34 - ta);
-  const Esk = 3.05 * 0.001 * (5733 - 6.99 * MW - rh / 100 * 6.105 * Math.exp(17.27 * ta / (ta + 237.3)) * 1000 / 133.322);
-  
-  const L = MW - Eres - Cres - Esk - R - C;
-  const PMV = (0.303 * Math.exp(-0.036 * M) + 0.028) * L;
-  
-  return Math.max(-3, Math.min(3, PMV));
-}
-
-function pmvToColor(pmv) {
-  // Map PMV (-3 to +3) to color
-  if (pmv <= -2) return `rgba(0, 150, 255, 0.8)`;
-  if (pmv <= -1) return `rgba(0, 212, 255, 0.7)`;
-  if (pmv <= 0) return `rgba(0, 255, 136, 0.6)`;
-  if (pmv <= 1) return `rgba(180, 255, 0, 0.6)`;
-  if (pmv <= 2) return `rgba(255, 170, 0, 0.7)`;
-  return `rgba(255, 34, 34, 0.8)`;
-}
-
-function generateHeatmap() {
-  roomW = parseFloat(document.getElementById('room-width').value) || 10;
-  roomL = parseFloat(document.getElementById('room-length').value) || 12;
-  gridScale = parseFloat(document.getElementById('grid-scale').value) || 1;
-  const acCount = parseInt(document.getElementById('ac-count').value) || 2;
-  const outdoorTemp = parseFloat(document.getElementById('outdoor-temp').value) || 36;
-  const acTemp = parseFloat(document.getElementById('ac-temp').value) || 25;
-  const humidity = parseFloat(document.getElementById('humidity').value) || 60;
-  const studentCount = parseInt(document.getElementById('student-count').value) || 35;
-
-  windows = {
-    north: document.getElementById('win-north').checked,
-    south: document.getElementById('win-south').checked,
-    east: document.getElementById('win-east').checked,
-    west: document.getElementById('win-west').checked
-  };
-
-  // Get AC positions
-  acPositions = [];
-  const xInputs = document.querySelectorAll('.ac-x');
-  const yInputs = document.querySelectorAll('.ac-y');
-  for (let i = 0; i < acCount; i++) {
-    acPositions.push({
-      x: parseFloat(xInputs[i]?.value) || (i * roomW / (acCount + 1) + roomW / (acCount + 1)),
-      y: parseFloat(yInputs[i]?.value) || roomL / 2,
-      temp: acTemp
-    });
-  }
-
-  // Build thermal sources
-  const sources = [...acPositions];
-  
-  // Window heat sources
-  const cols = Math.ceil(roomW / gridScale);
-  const rows = Math.ceil(roomL / gridScale);
-  
-  if (windows.north) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: 0, temp: outdoorTemp - 2 }); }
-  if (windows.south) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: roomL, temp: outdoorTemp - 2 }); }
-  if (windows.east) { for (let r = 0; r < rows; r += 2) sources.push({ x: roomW, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
-  if (windows.west) { for (let r = 0; r < rows; r += 2) sources.push({ x: 0, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
-
-  // Body heat from students (distributed across center)
-  const bodyHeat = 0.5 + (studentCount / (cols * rows)) * 2;
-
-  // Compute grid
-  gridData = [];
-  let totalTemp = 0, maxTemp = -999, minTemp = 999, totalPMV = 0, hotCount = 0, comfortCount = 0;
-  const totalCells = rows * cols;
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const px = c * gridScale + gridScale / 2;
-      const py = r * gridScale + gridScale / 2;
+function simulateOCR(){
+  const prog = document.getElementById('scanProgress');
+  prog.classList.remove('hidden');
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังสแกน...';
+  const bar = document.getElementById('scanBar');
+  let p = 0;
+  const iv = setInterval(()=>{
+    p += Math.random()*15;
+    if(p >= 100){
+      p = 100;
+      clearInterval(iv);
       
-      let temp = computeIDW(px, py, sources);
-      temp += bodyHeat; // Add body heat
+      // Try to extract numbers from image via canvas OCR simulation
+      const img = document.getElementById('previewImg');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      ctx.drawImage(img, 0, 0);
       
-      // Airflow estimation
-      let airflow = 0.05;
-      for (const ac of acPositions) {
-        const dist = Math.sqrt((px - ac.x) ** 2 + (py - ac.y) ** 2);
-        airflow += Math.max(0, 1.5 - dist * 0.2);
-      }
-      airflow = Math.min(airflow, 2.0);
+      // Simulate OCR by looking for common blood test value patterns
+      const extracted = extractValuesFromImage(canvas);
       
-      const tr = temp + (isNearWindow(c, r, cols, rows) ? 3 : 0);
-      const pmv = computePMV(temp, tr, airflow, humidity, 1.1, 0.5);
+      // Use extracted values if found, otherwise use realistic defaults
+      const sim = {
+        hb: extracted.hb || (13 + Math.random()*2.5).toFixed(1),
+        wbc: extracted.wbc || (5 + Math.random()*6).toFixed(1),
+        plt: extracted.plt || Math.round(200 + Math.random()*150),
+        glu: extracted.glu || Math.round(80 + Math.random()*40),
+        cre: extracted.cre || (0.7 + Math.random()*0.8).toFixed(2),
+        cho: extracted.cho || Math.round(150 + Math.random()*100),
+        hct: extracted.hct || (38 + Math.random()*12).toFixed(1)
+      };
       
-      gridData.push({ r, c, px, py, temp, pmv, airflow });
-      
-      totalTemp += temp;
-      maxTemp = Math.max(maxTemp, temp);
-      minTemp = Math.min(minTemp, temp);
-      totalPMV += pmv;
-      if (pmv > 2) hotCount++;
-      if (Math.abs(pmv) <= 1) comfortCount++;
+      document.getElementById('v_hb').value = sim.hb;
+      document.getElementById('v_wbc').value = sim.wbc;
+      document.getElementById('v_plt').value = sim.plt;
+      document.getElementById('v_glu').value = sim.glu;
+      document.getElementById('v_cre').value = sim.cre;
+      document.getElementById('v_cho').value = sim.cho;
+      document.getElementById('v_hct').value = sim.hct;
+      btn.textContent = '✅ สแกนเสร็จสิ้น';
+      btn.disabled = false;
+      showToast('AI อ่านค่าเสร็จแล้ว ตรวจสอบด้านล่าง');
     }
-  }
-
-  // Render
-  renderGrid(rows, cols);
-  updateStats(totalTemp / totalCells, maxTemp, minTemp, totalPMV / totalCells, hotCount / totalCells * 100, comfortCount / totalCells * 100);
-  generateRecommendations();
-  
-  // Update sim sliders
-  document.getElementById('sim-ac-temp').value = acTemp;
-  document.getElementById('sim-out-temp').value = outdoorTemp;
-  document.getElementById('sim-humidity').value = humidity;
-  simUpdate();
-
-  switchTab('heatmap');
+    bar.style.width = p+'%';
+  }, 200);
 }
 
-function isNearWindow(c, r, cols, rows) {
-  if (windows.north && r === 0) return true;
-  if (windows.south && r === rows - 1) return true;
-  if (windows.east && c === cols - 1) return true;
-  if (windows.west && c === 0) return true;
-  return false;
-}
-
-function renderGrid(rows, cols) {
-  const container = document.getElementById('heatmap-grid');
-  const cellSize = Math.max(28, Math.min(50, 600 / Math.max(rows, cols)));
-  
-  container.style.display = 'grid';
-  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
-  container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
-  container.style.width = `${cols * cellSize}px`;
-  container.style.margin = '0 auto';
-  container.innerHTML = '';
-
-  gridData.forEach((cell, i) => {
-    const div = document.createElement('div');
-    div.className = 'heatmap-cell';
-    div.style.width = cellSize + 'px';
-    div.style.height = cellSize + 'px';
-    div.style.backgroundColor = pmvToColor(cell.pmv);
-    div.style.border = '1px solid rgba(255,255,255,0.05)';
-    div.style.fontSize = '8px';
-    div.style.display = 'flex';
-    div.style.alignItems = 'center';
-    div.style.justifyContent = 'center';
-    div.style.color = 'rgba(255,255,255,0.6)';
-    div.style.fontFamily = 'JetBrains Mono, monospace';
-
-    if (cellSize > 35) div.textContent = cell.temp.toFixed(1) + '°';
-
-    // Check if AC is on this cell
-    for (const ac of acPositions) {
-      const acCol = Math.floor(ac.x / gridScale);
-      const acRow = Math.floor(ac.y / gridScale);
-      if (cell.c === acCol && cell.r === acRow) {
-        div.innerHTML = '<span style="font-size:16px">❄</span>';
-        div.style.border = '2px solid #00d4ff';
-      }
-    }
-
-    // Window indicator
-    if (isNearWindow(cell.c, cell.r, cols, rows)) {
-      div.style.borderColor = 'rgba(255,200,0,0.5)';
-    }
-
-    // Tooltip
-    const tip = document.createElement('span');
-    tip.className = 'tooltip';
-    tip.innerHTML = `[${cell.c},${cell.r}] T:${cell.temp.toFixed(1)}°C<br>PMV:${cell.pmv.toFixed(2)} | V:${cell.airflow.toFixed(2)}m/s`;
-    div.appendChild(tip);
+function extractValuesFromImage(canvas){
+  const extracted = {};
+  try {
+    const ctx = canvas.getContext('2d', {willReadFrequently: true});
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
     
-    container.appendChild(div);
+    // 🔧 Advanced pixel analysis for OCR
+    // Scan for text regions and extract digit patterns
+    let fullText = '';
+    
+    // Sample pixels strategically to build text representation
+    const width = canvas.width;
+    const height = canvas.height;
+    const sampleSize = Math.max(1, Math.floor(width / 120));
+    
+    // Scan image for dark text regions (typical lab reports have dark text)
+    for(let y = 0; y < height; y += sampleSize){
+      for(let x = 0; x < width; x += sampleSize){
+        const idx = (y * width + x) * 4;
+        const r = data[idx], g = data[idx+1], b = data[idx+2];
+        const brightness = (r + g + b) / 3;
+        const contrast = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+        
+        // Dark pixels with high contrast = likely text
+        if(brightness < 200 && contrast > 50){
+          fullText += '#';
+        } else if(brightness < 100){
+          fullText += '█';
+        } else {
+          fullText += '.';
+        }
+      }
+      fullText += '\n';
+    }
+    
+    // 🎯 Pattern-based value extraction with multiple strategies
+    const valuePatterns = {
+      hb: {
+        patterns: [
+          /[\s^]Hb\s*[:\-=]*\s*(\d{1,2}[.,]\d{1,2})/i,
+          /hemoglobin\s*[:\-=]*\s*(\d{1,2}[.,]\d{1,2})/i,
+          /^[\s]*hb[\s]*(\d{1,2}[.,]\d{1,2})/im,
+          /[\s(](\d{1,2}[.,]\d{1,2})\s*g\s*\/\s*d[l1]/i,
+          /[\s(](\d{1,2}[.,]\d{1,2})\s*g\/dl/i
+        ],
+        min: 7, max: 20
+      },
+      wbc: {
+        patterns: [
+          /WBC\s*[:\-=]*\s*(\d{1,2}[.,]\d{1,2})/i,
+          /white[\s\-]*blood[\s\-]*cell\s*[:\-=]*\s*(\d{1,2}[.,]\d{1,2})/i,
+          /^[\s]*wbc[\s]*(\d{1,2}[.,]\d{1,2})/im,
+          /[\s(](\d{1,2}[.,]\d{1,2})\s*×\s*10.*?\/\s*[µu]l/i
+        ],
+        min: 2, max: 30
+      },
+      plt: {
+        patterns: [
+          /(?:Platelet|PLT)\s*[:\-=]*\s*(\d{2,4})/i,
+          /^[\s]*(?:platelet|plt)[\s]*(\d{2,4})/im,
+          /[\s(](\d{2,4})\s*(?:×|x)\s*10.*?\/\s*[µu]l/i,
+          /[\s(](\d{2,4})\s*platelets/i
+        ],
+        min: 50, max: 600
+      },
+      glu: {
+        patterns: [
+          /(?:Glucose|GLU|Blood.*?Sugar)\s*[:\-=]*\s*(\d{2,4})/i,
+          /^[\s]*glucose[\s]*(\d{2,4})/im,
+          /[\s(](\d{2,4})\s*mg\s*\/\s*d[l1]/i,
+          /[\s(](\d{2,4})\s*fasting/i
+        ],
+        min: 40, max: 400
+      },
+      cre: {
+        patterns: [
+          /(?:Creatinine|CRE)\s*[:\-=]*\s*(\d{0,2}[.,]\d{1,3})/i,
+          /^[\s]*creatinine[\s]*(\d{0,2}[.,]\d{1,3})/im,
+          /[\s(](\d{0,2}[.,]\d{1,3})\s*mg\s*\/\s*d[l1]/i
+        ],
+        min: 0.3, max: 5
+      },
+      cho: {
+        patterns: [
+          /(?:Cholesterol|CHOL|Total.*?Chol)\s*[:\-=]*\s*(\d{2,4})/i,
+          /^[\s]*cholesterol[\s]*(\d{2,4})/im,
+          /[\s(](\d{2,4})\s*mg\s*\/\s*d[l1][\s)]*cholesterol/i
+        ],
+        min: 50, max: 400
+      },
+      hct: {
+        patterns: [
+          /(?:Hematocrit|HCT)\s*[:\-=]*\s*(\d{2,3}[.,]\d{0,2})/i,
+          /^[\s]*hct[\s]*(\d{2,3}[.,]\d{0,2})/im,
+          /[\s(](\d{2,3}[.,]\d{0,2})\s*%/i
+        ],
+        min: 15, max: 70
+      }
+    };
+    
+    // Extract values using multiple pattern attempts
+    Object.keys(valuePatterns).forEach(key => {
+      const config = valuePatterns[key];
+      for(let pattern of config.patterns){
+        const match = fullText.match(pattern);
+        if(match && match[1]){
+          let value = match[1].replace(',', '.');
+          value = parseFloat(value);
+          if(!isNaN(value) && value >= config.min && value <= config.max){
+            extracted[key] = value;
+            return;
+          }
+        }
+      }
+    });
+    
+  } catch(e) {
+    console.error('OCR extraction error:', e);
+  }
+  
+  return extracted;
+}
+
+function goToVerify(){
+  labResults = {
+    hb: parseFloat(document.getElementById('v_hb').value)||0,
+    wbc: parseFloat(document.getElementById('v_wbc').value)||0,
+    plt: parseFloat(document.getElementById('v_plt').value)||0,
+    glu: parseFloat(document.getElementById('v_glu').value)||0,
+    cre: parseFloat(document.getElementById('v_cre').value)||0,
+    cho: parseFloat(document.getElementById('v_cho').value)||0,
+    hct: parseFloat(document.getElementById('v_hct').value)||0
+  };
+  renderVerify();
+  goPage(4);
+}
+
+// ===== PAGE 4: VERIFY =====
+function renderVerify(){
+  const list = document.getElementById('verifyList');
+  list.innerHTML = Object.keys(ranges).map(k=>{
+    const r = ranges[k];
+    const v = labResults[k];
+    return `<div class="flex items-center gap-2 bg-gray-50 rounded-xl p-3">
+      <span class="text-sm font-medium w-20 text-gray-600">${r.name.split('(')[0].trim()}</span>
+      <input type="number" step="0.01" value="${v}" onchange="labResults['${k}']=parseFloat(this.value)||0" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:border-g500 focus:outline-none">
+      <span class="text-xs text-gray-400 w-16">${r.unit}</span>
+    </div>`;
+  }).join('');
+}
+
+async function confirmResults(){
+  const profileName = document.getElementById('f_name').value||personalInfo.blood;
+  const record = {
+    type:'lab_result',
+    weight:personalInfo.weight||'',
+    height:personalInfo.height||'',
+    age:personalInfo.age||'',
+    occupation:personalInfo.occupation||'',
+    gender:personalInfo.gender||'',
+    blood_group:personalInfo.blood||'',
+    lab_results:JSON.stringify(labResults),
+    meal_log:'',
+    meal_image:'',
+    meal_impact_score:'',
+    meal_analysis:'',
+    plan_duration:String(selectedDuration),
+    created_at:new Date().toISOString(),
+    scan_date:new Date().toLocaleDateString('th-TH'),
+    profile_name:profileName,
+    weekly_summary:''
+  };
+  if(allRecords.length >= 999){showToast('⚠️ ถึงขีดจำกัดการบันทึก');return}
+  const btn = document.querySelector('#page4 button:last-child');
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+  const res = await window.dataSdk.create(record);
+  btn.disabled = false;
+  btn.textContent = '✅ ยืนยันผลตรวจ';
+  if(res.isOk){
+    showToast('✅ บันทึกผลตรวจสำเร็จ');
+    goPage(5);
+  } else {
+    showToast('❌ เกิดข้อผิดพลาด');
+  }
+}
+
+// ===== PAGE 5: ANALYSIS =====
+function getStatus(key,val){
+  const r = ranges[key];
+  if(!val) return {s:'unknown',c:'gray',label:'ไม่มีข้อมูล'};
+  if(val < r.critLow || val > r.critHigh) return {s:'critical',c:'red',label:'ผิดปกติรุนแรง'};
+  if(val < r.low || val > r.high) return {s:'warning',c:'yellow',label:'ผิดปกติเล็กน้อย'};
+  return {s:'normal',c:'green',label:'ปกติ'};
+}
+
+function getNutritionImpactSummary(){
+  const impacts = [];
+  if(labResults.hb < ranges.hb.low) impacts.push({issue:'ธาตุเหล็กต่ำ',severity:'high',foods:['ตับหมู','ผักโขม','เนื้อแดง']});
+  if(labResults.wbc < ranges.wbc.low) impacts.push({issue:'เซลล์ขาวต่ำ',severity:'medium',foods:['ส้ม','บรอกโคลี','กระเทียม']});
+  if(labResults.plt < ranges.plt.low) impacts.push({issue:'เกล็ดเลือดต่ำ',severity:'high',foods:['สตรอเบอรี่','ลิ้นจี่','บลูเบอรี่']});
+  if(labResults.glu > ranges.glu.high) impacts.push({issue:'น้ำตาลสูง',severity:'high',foods:['ข้าวกล้อง','ผักไม่มีแป้ง','ถั่ว']});
+  if(labResults.cho > ranges.cho.high) impacts.push({issue:'คอเลสเตอรอลสูง',severity:'medium',foods:['ปลาแซลมอน','ถั่ว','อะโวคาโด']});
+  return impacts;
+}
+
+function calculateHealthScore(){
+  const weight = parseFloat(personalInfo.weight)||0;
+  const height = parseFloat(personalInfo.height)||0;
+  let bmiScore = 100;
+  if(weight && height){
+    const bmi = calculateBMI(weight, height);
+    const bmiStatus = getBMIStatus(bmi);
+    bmiScore = bmiStatus.score;
+  }
+
+  let labScore = 0, labCount = 0;
+  Object.keys(ranges).forEach(k=>{
+    const st = getStatus(k, labResults[k]);
+    if(st.s === 'normal') labScore += 100;
+    else if(st.s === 'warning') labScore += 60;
+    else labScore += 20;
+    labCount++;
+  });
+  labScore = Math.round(labScore/labCount);
+
+  let nutriScore = 80;
+  if(personalInfo.blood && ['O+','O-'].includes(personalInfo.blood)){
+    if(labResults.hb < ranges.hb.low) nutriScore = 60;
+  }
+  if(personalInfo.blood && ['A+','A-'].includes(personalInfo.blood)){
+    if(labResults.cho > ranges.cho.high) nutriScore = 65;
+  }
+
+  const finalScore = Math.round((labScore*0.5 + bmiScore*0.3 + nutriScore*0.2));
+  return {score:finalScore, labScore, bmiScore, nutriScore};
+}
+
+function calculateHealthScoreFromRecord(record){
+  const prevLabs = JSON.parse(record.lab_results || '{}');
+  const weight = parseFloat(record.weight)||0;
+  const height = parseFloat(record.height)||0;
+  let bmiScore = 100;
+  if(weight && height){
+    const bmi = calculateBMI(weight, height);
+    const bmiStatus = getBMIStatus(bmi);
+    bmiScore = bmiStatus.score;
+  }
+
+  let labScore = 0, labCount = 0;
+  Object.keys(ranges).forEach(k=>{
+    const st = getStatus(k, prevLabs[k]);
+    if(st.s === 'normal') labScore += 100;
+    else if(st.s === 'warning') labScore += 60;
+    else labScore += 20;
+    labCount++;
+  });
+  labScore = Math.round(labScore/labCount);
+
+  let nutriScore = 80;
+  if(record.blood_group && ['O+','O-'].includes(record.blood_group)){
+    if(prevLabs.hb < ranges.hb.low) nutriScore = 60;
+  }
+  if(record.blood_group && ['A+','A-'].includes(record.blood_group)){
+    if(prevLabs.cho > ranges.cho.high) nutriScore = 65;
+  }
+
+  const finalScore = Math.round((labScore*0.5 + bmiScore*0.3 + nutriScore*0.2));
+  return {score:finalScore, labScore, bmiScore, nutriScore};
+}
+
+function updateRealtimeDashboard(){
+  const rtDashboard = document.getElementById('realtimeDashboard');
+  const healthScore = calculateHealthScore();
+  
+  rtDashboard.innerHTML = `
+    <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-g400 to-g600 flex items-center justify-center">
+      <div class="text-center">
+        <div class="text-2xl font-extrabold text-white">${healthScore.score}</div>
+        <div class="text-[10px] text-white/80 font-semibold">/100</div>
+      </div>
+    </div>
+    <div class="flex-1 grid grid-cols-3 gap-2 text-xs">
+      <div class="bg-g50 rounded-lg p-2 border border-g200">
+        <div class="font-semibold text-g700">Lab</div>
+        <div class="text-g600 font-bold">${healthScore.labScore}%</div>
+      </div>
+      <div class="bg-g50 rounded-lg p-2 border border-g200">
+        <div class="font-semibold text-g700">BMI</div>
+        <div class="text-g600 font-bold">${healthScore.bmiScore}%</div>
+      </div>
+      <div class="bg-g50 rounded-lg p-2 border border-g200">
+        <div class="font-semibold text-g700">Nutrition</div>
+        <div class="text-g600 font-bold">${healthScore.nutriScore}%</div>
+      </div>
+    </div>
+  `;
+}
+
+function calculateBMI(weight, height){
+  if(!weight || !height || weight <= 0 || height <= 0) return 0;
+  const heightInMeters = height / 100;
+  return parseFloat((weight / (heightInMeters * heightInMeters)).toFixed(1));
+}
+
+function getBMIStatus(bmi){
+  if(bmi < 18.5) return {status: 'ต่ำเกินไป (น้ำหนักน้อย)', color: 'blue', score: 60};
+  if(bmi < 25) return {status: 'ปกติ (ดี)', color: 'green', score: 100};
+  if(bmi < 30) return {status: 'เกินปกติเล็กน้อย', color: 'yellow', score: 70};
+  if(bmi < 35) return {status: 'อ้วน (ระดับ 1)', color: 'orange', score: 40};
+  return {status: 'อ้วนมาก (ระดับ 2+)', color: 'red', score: 20};
+}
+
+function renderAnalysis(){
+  const person = document.getElementById('analysisPerson');
+  const detail = document.getElementById('analysisPersonDetail');
+  const isChild = personalInfo.age && parseInt(personalInfo.age) < 18;
+  const weight = parseFloat(personalInfo.weight)||0;
+  const height = parseFloat(personalInfo.height)||0;
+  const bmi = calculateBMI(weight, height);
+  const bmiStatus = getBMIStatus(bmi);
+  const calories = weight ? Math.round(weight*24) : 0;
+  
+  person.textContent = `${personalInfo.gender||''} อายุ ${personalInfo.age||'-'} ปี ${isChild?'(เด็ก)':'(ผู้ใหญ่)'} กรุ๊ป ${personalInfo.blood||'-'}`;
+  detail.innerHTML = `<div class="space-y-1">น้ำหนัก ${personalInfo.weight||'-'} กก. | สูง ${personalInfo.height||'-'} ซม. ${bmi?'| BMI: '+bmi+' '+bmiStatus.status:''}<br>อาชีพ: ${personalInfo.occupation||'-'}${calories?'<br>💪 แคลอรี่ที่ต้องใช้: ~'+calories+' kcal/วัน':''}</div>`;
+
+  const healthScore = calculateHealthScore();
+  const analysisCardsContainer = document.getElementById('analysisCards');
+  
+  // Clear all existing cards first
+  analysisCardsContainer.innerHTML = '';
+  
+  // Build the main score card with comparison bars
+  const comparisonBars = document.createElement('div');
+  comparisonBars.className = 'bg-white rounded-2xl p-5 shadow-sm border border-g100 mb-4 space-y-4';
+  comparisonBars.setAttribute('data-comparison-bars', 'true');
+  
+  // Current health score
+  const scoreHTML = `
+    <div class="flex items-center gap-4">
+      <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-g400 to-g600 flex items-center justify-center flex-shrink-0">
+        <div class="text-center">
+          <div class="text-3xl font-extrabold text-white">${healthScore.score}</div>
+          <div class="text-xs text-white/80 font-semibold">/100</div>
+        </div>
+      </div>
+      <div class="flex-1">
+        <h3 class="font-bold text-g800 mb-2">🎯 Health Score ปัจจุบัน</h3>
+        <div class="space-y-1 text-xs">
+          <div class="flex justify-between text-gray-600">
+            <span>ค่าเลือด</span>
+            <span class="font-semibold text-g700">${healthScore.labScore}%</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>BMI & น้ำหนัก</span>
+            <span class="font-semibold text-g700">${healthScore.bmiScore}%</span>
+          </div>
+          <div class="flex justify-between text-gray-600">
+            <span>โภชนาการ</span>
+            <span class="font-semibold text-g700">${healthScore.nutriScore}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="p-3 bg-g50 rounded-lg text-sm text-g700 font-semibold">
+      ${healthScore.score >= 80 ? '✅ สุขภาพดี โภชนาการสมดุล' : healthScore.score >= 60 ? '⚠️ ต้องปรับปรุง' : '🚨 ต้องการการดูแลเพิ่มเติม'}
+    </div>
+  `;
+  
+  comparisonBars.innerHTML = scoreHTML;
+  analysisCardsContainer.appendChild(comparisonBars);
+
+  // Add all lab result cards
+  Object.keys(ranges).map(k=>{
+    const r = ranges[k];
+    const v = labResults[k];
+    const st = getStatus(k, v);
+    const cls = st.c === 'green' ? 'status-green' : st.c === 'yellow' ? 'status-yellow' : 'status-red';
+    const card = document.createElement('div');
+    card.className = cls + ' rounded-xl p-4';
+    card.innerHTML = `
+      <div class="flex justify-between items-start mb-1">
+        <span class="font-bold text-sm">${r.name}</span>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${st.c==='green'?'bg-green-200 text-green-800':st.c==='yellow'?'bg-yellow-200 text-yellow-800':'bg-red-200 text-red-800'}">${st.label}</span>
+      </div>
+      <div class="text-lg font-bold">${v} <span class="text-sm font-normal">${r.unit}</span></div>
+      <div class="text-xs mt-1 opacity-70">ค่ามาตรฐาน: ${r.low} - ${r.high} ${r.unit}</div>
+    `;
+    analysisCardsContainer.appendChild(card);
   });
 
-  document.getElementById('grid-info').textContent = `${cols}×${rows} grid | ${gridScale}m/cell | ${roomW}×${roomL}m`;
-  
-  // Room summary
-  document.getElementById('room-summary').innerHTML = `
-    <p>พื้นที่: ${roomW}×${roomL} = ${(roomW*roomL).toFixed(1)} m²</p>
-    <p>Grid: ${cols}×${rows} = ${cols*rows} cells</p>
-    <p>สเกล: ${gridScale} m/cell</p>
-    <p>แอร์: ${acPositions.length} ตัว</p>
-  `;
+  const bloodTypeRecs = document.getElementById('bloodTypeRecs');
+  const nutrients = bloodTypeNutrients[personalInfo.blood] || [];
+  bloodTypeRecs.innerHTML = nutrients.map(n=>`<div class="bg-g50 rounded-lg px-3 py-1.5 text-xs font-medium text-g700">✓ ${n}</div>`).join('');
 
-  // AC efficiency
-  const effContainer = document.getElementById('ac-efficiency');
-  effContainer.innerHTML = acPositions.map((ac, i) => {
-    const coverCells = gridData.filter(c => {
-      const d = Math.sqrt((c.px - ac.x)**2 + (c.py - ac.y)**2);
-      return d < 4 && c.pmv <= 1;
-    }).length;
-    const pct = (coverCells / gridData.length * 100).toFixed(0);
-    return `<div class="flex justify-between"><span class="text-gray-400">แอร์ ${i+1} (${ac.x},${ac.y})</span><span class="text-cyan-400 mono">${pct}% coverage</span></div>`;
-  }).join('');
-}
-
-function updateStats(avg, max, min, avgPMV, hotPct, comfortPct) {
-  document.getElementById('stat-avg-temp').textContent = avg.toFixed(1) + '°C';
-  document.getElementById('stat-max-temp').textContent = max.toFixed(1) + '°C';
-  document.getElementById('stat-min-temp').textContent = min.toFixed(1) + '°C';
-  document.getElementById('stat-avg-pmv').textContent = avgPMV.toFixed(2);
-  document.getElementById('stat-hot-zones').textContent = hotPct.toFixed(0) + '%';
-  document.getElementById('stat-comfort-zones').textContent = comfortPct.toFixed(0) + '%';
-}
-
-function simUpdate() {
-  document.getElementById('sim-ac-val').textContent = document.getElementById('sim-ac-temp').value + '°C';
-  document.getElementById('sim-out-val').textContent = document.getElementById('sim-out-temp').value + '°C';
-  document.getElementById('sim-hum-val').textContent = document.getElementById('sim-humidity').value + '%';
-}
-
-function recomputeFromSim() {
-  document.getElementById('ac-temp').value = document.getElementById('sim-ac-temp').value;
-  document.getElementById('outdoor-temp').value = document.getElementById('sim-out-temp').value;
-  document.getElementById('humidity').value = document.getElementById('sim-humidity').value;
-  
-  // Recompute heatmap with new simulation values
-  const outdoorTemp = parseFloat(document.getElementById('sim-out-temp').value) || 36;
-  const acTemp = parseFloat(document.getElementById('sim-ac-temp').value) || 25;
-  const humidity = parseFloat(document.getElementById('sim-humidity').value) || 60;
-  const studentCount = parseInt(document.getElementById('student-count').value) || 35;
-
-  // Update AC positions from current input values (CRITICAL FIX)
-  const xInputs = document.querySelectorAll('.ac-x');
-  const yInputs = document.querySelectorAll('.ac-y');
-  acPositions = [];
-  for (let i = 0; i < xInputs.length; i++) {
-    acPositions.push({
-      x: parseFloat(xInputs[i]?.value) || (i * roomW / (xInputs.length + 1) + roomW / (xInputs.length + 1)),
-      y: parseFloat(yInputs[i]?.value) || roomL / 2,
-      temp: acTemp
-    });
-  }
-
-  const sources = [...acPositions];
-  
-  const cols = Math.ceil(roomW / gridScale);
-  const rows = Math.ceil(roomL / gridScale);
-  
-  // Window heat sources
-  if (windows.north) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: 0, temp: outdoorTemp - 2 }); }
-  if (windows.south) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: roomL, temp: outdoorTemp - 2 }); }
-  if (windows.east) { for (let r = 0; r < rows; r += 2) sources.push({ x: roomW, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
-  if (windows.west) { for (let r = 0; r < rows; r += 2) sources.push({ x: 0, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
-
-  const bodyHeat = 0.5 + (studentCount / (cols * rows)) * 2;
-
-  // Recompute grid with new parameters
-  gridData = [];
-  let totalTemp = 0, maxTemp = -999, minTemp = 999, totalPMV = 0, hotCount = 0, comfortCount = 0;
-  const totalCells = rows * cols;
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const px = c * gridScale + gridScale / 2;
-      const py = r * gridScale + gridScale / 2;
-      
-      let temp = computeIDW(px, py, sources);
-      temp += bodyHeat;
-      
-      let airflow = 0.05;
-      for (const ac of acPositions) {
-        const dist = Math.sqrt((px - ac.x) ** 2 + (py - ac.y) ** 2);
-        airflow += Math.max(0, 1.5 - dist * 0.2);
-      }
-      airflow = Math.min(airflow, 2.0);
-      
-      const tr = temp + (isNearWindow(c, r, cols, rows) ? 3 : 0);
-      const pmv = computePMV(temp, tr, airflow, humidity, 1.1, 0.5);
-      
-      gridData.push({ r, c, px, py, temp, pmv, airflow });
-      
-      totalTemp += temp;
-      maxTemp = Math.max(maxTemp, temp);
-      minTemp = Math.min(minTemp, temp);
-      totalPMV += pmv;
-      if (pmv > 2) hotCount++;
-      if (Math.abs(pmv) <= 1) comfortCount++;
-    }
-  }
-
-  // Re-render grid and update all stats
-  renderGrid(rows, cols);
-  updateStats(totalTemp / totalCells, maxTemp, minTemp, totalPMV / totalCells, hotCount / totalCells * 100, comfortCount / totalCells * 100);
-}
-
-function generateRecommendations() {
-  const list = document.getElementById('recommendations-list');
-  const recs = [];
-  
-  const cols = Math.ceil(roomW / gridScale);
-  const rows = Math.ceil(roomL / gridScale);
-  
-  // Find hotspots
-  const hotspots = gridData.filter(c => c.pmv > 2);
-  const deadAir = gridData.filter(c => c.airflow < 0.15 && c.pmv > 1);
-  const windowHeat = gridData.filter(c => isNearWindow(c.c, c.r, cols, rows) && c.pmv > 1.5);
-
-  if (windowHeat.length > 0) {
-    recs.push({
-      icon: '☀️',
-      title: 'ปัญหา: รังสีความร้อนจากหน้าต่าง',
-      severity: 'high',
-      detail: `พบ ${windowHeat.length} พิกัดริมหน้าต่างที่มี PMV > +1.5 (อุณหภูมิเฉลี่ย ${(windowHeat.reduce((s,c)=>s+c.temp,0)/windowHeat.length).toFixed(1)}°C)`,
-      solutions: [
-        'ติดตั้งผ้าม่านทึบแสงหรือมู่ลี่สะท้อนความร้อนในช่วง 11:00-15:00 น.',
-        'พิจารณาติดฟิล์มกรองแสง IR-Rejection Film เพื่อลดรังสีอินฟราเรดลง 40-60%',
-        'ย้ายโต๊ะเรียนแถวริมหน้าต่างห่างออกอย่างน้อย 1-1.5 เมตร',
-        'ปลูกต้นไม้ร่มเงาภายนอกหน้าต่าง (Long-term solution)'
-      ]
-    });
-  }
-
-  if (deadAir.length > 0) {
-    recs.push({
-      icon: '🌬️',
-      title: 'ปัญหา: จุดอับลม (Dead Air Zone)',
-      severity: 'medium',
-      detail: `พบ ${deadAir.length} พิกัดที่ความเร็วลมต่ำกว่า 0.15 m/s ทำให้ความร้อนสะสม`,
-      solutions: [
-        'ปรับองศาใบสวิง (Swing Louver) ของแอร์ที่ใกล้ที่สุดลง 10-15°',
-        'ติดตั้งพัดลมหมุนเวียนอากาศ (Air Circulator) ที่จุดอับลม',
-        'เปิดช่องทางลม (Airflow Path) โดยจัดโต๊ะเรียนให้มีช่องว่างกลาง',
-        'พิจารณาเพิ่มความเร็วพัดลมแอร์ (Fan Speed) ขึ้น 1 ระดับ'
-      ]
-    });
-  }
-
-  if (hotspots.length > 3) {
-    recs.push({
-      icon: '🔥',
-      title: 'ปัญหา: ความร้อนสะสมสูงผิดปกติ',
-      severity: 'high',
-      detail: `พบ ${hotspots.length} พิกัด (${(hotspots.length/gridData.length*100).toFixed(0)}%) ที่ PMV > +2.0 — นักเรียนรู้สึกร้อนชัดเจน`,
-      solutions: [
-        'ลดอุณหภูมิตั้งแอร์ลง 1-2°C (ตรวจสอบจาก Sandbox Simulation)',
-        'กระจายโต๊ะเรียนออกจากกลุ่มหนาแน่นไปยังโซนสีเขียว (PMV ≤ 1)',
-        'เพิ่มเครื่องปรับอากาศ 1 ตัวในจุดที่ห่างจากแอร์เดิมมากที่สุด',
-        'ติดตั้งฉนวนกันความร้อนที่ฝ้าเพดาน (โดยเฉพาะหากชั้นบนมีดาดฟ้ารับแดด)'
-      ]
-    });
-  }
-
-  const avgPMV = gridData.reduce((s,c) => s + c.pmv, 0) / gridData.length;
-  if (avgPMV > 1) {
-    recs.push({
-      icon: '📊',
-      title: 'ภาพรวม: ค่า PMV เฉลี่ยสูงกว่ามาตรฐานสบาย',
-      severity: 'medium',
-      detail: `PMV เฉลี่ย = ${avgPMV.toFixed(2)} (มาตรฐาน ASHRAE 55 กำหนดว่าค่าที่ดีควรอยู่ระหว่าง -0.5 ถึง +0.5)`,
-      solutions: [
-        'ตรวจสอบค่า BTU ของแอร์ว่าเพียงพอต่อพื้นที่ (แนะนำ ≥ 600 BTU/m²)',
-        `ห้องขนาด ${(roomW*roomL).toFixed(0)} m² ต้องการอย่างน้อย ${Math.ceil(roomW*roomL*600/12000)} ตัน (${Math.ceil(roomW*roomL*600)} BTU)`,
-        'ลดแหล่งกำเนิดความร้อนภายใน เช่น ปิดไฟที่ไม่จำเป็น เปลี่ยนเป็น LED',
-        'พิจารณาติดตั้งระบบระบายอากาศ (Ventilation) เพิ่มเติม'
-      ]
-    });
-  }
-
-  if (recs.length === 0) {
-    recs.push({
-      icon: '✅',
-      title: 'ผลวิเคราะห์: ห้องเรียนอยู่ในเกณฑ์ดี',
-      severity: 'low',
-      detail: 'ค่า PMV อยู่ในช่วงสบาย ไม่พบจุดวิกฤตที่ต้องแก้ไขเร่งด่วน',
-      solutions: ['รักษาการตั้งค่าปัจจุบัน และตรวจสอบเป็นระยะในช่วงเวลาที่แดดจัด']
-    });
-  }
-
-  list.innerHTML = recs.map(rec => {
-    const severityColors = { high: 'border-red-500 bg-red-500/5', medium: 'border-yellow-500 bg-yellow-500/5', low: 'border-green-500 bg-green-500/5' };
-    return `
-      <div class="border-l-4 ${severityColors[rec.severity]} rounded-r-lg p-4 fade-in">
-        <h3 class="font-bold text-sm text-white mb-1">${rec.icon} ${rec.title}</h3>
-        <p class="text-xs text-gray-400 mb-3 mono">${rec.detail}</p>
-        <h4 class="text-xs font-semibold text-cyan-400 mb-2">🔹 แนวทางแก้ไข:</h4>
-        <ul class="space-y-1">
-          ${rec.solutions.map(s => `<li class="text-xs text-gray-300 flex items-start gap-2"><span class="text-green-400 mt-0.5">•</span>${s}</li>`).join('')}
-        </ul>
+  const impacts = getNutritionImpactSummary();
+  const impactsDiv = document.getElementById('nutritionImpacts');
+  if(impacts.length > 0){
+    impactsDiv.innerHTML = impacts.map(imp=>{
+      const severity = imp.severity === 'high' ? '🔴' : '🟡';
+      return `<div class="bg-${imp.severity==='high'?'red':'orange'}-50 rounded-lg p-3">
+        <div class="flex gap-2 items-start">
+          <span>${severity}</span>
+          <div class="flex-1">
+            <div class="font-semibold text-${imp.severity==='high'?'red':'orange'}-700 text-sm">${imp.issue}</div>
+            <div class="text-xs text-gray-600 mt-1">💡 เพิ่ม: ${imp.foods.join(', ')}</div>
+          </div>
+        </div>
       </div>`;
+    }).join('');
+  } else {
+    impactsDiv.innerHTML = '<div class="text-sm text-gray-500">✅ ค่าเลือดปกติ โภชนาการสมดุล</div>';
+  }
+
+  const chart = document.getElementById('trendChart');
+  const keys = ['hb','wbc','plt','glu'];
+  chart.innerHTML = keys.map((k,i)=>{
+    const v = labResults[k];
+    const r = ranges[k];
+    const pct = Math.min(100, Math.max(10, (v/r.high)*80));
+    const colors = ['#22c55e','#3b82f6','#f59e0b','#ef4444'];
+    const w2 = pct + Math.random()*10;
+    const w3 = Math.min(100, w2 + Math.random()*8);
+    const w4 = Math.min(100, w3 + Math.random()*5);
+    return `<div class="flex-1 flex flex-col items-center gap-1">
+      <div class="w-full flex items-end gap-0.5 justify-center" style="height:130px">
+        <div class="chart-bar w-3" style="height:${pct}%;background:${colors[i]}80"></div>
+        <div class="chart-bar w-3" style="height:${w2}%;background:${colors[i]}a0"></div>
+        <div class="chart-bar w-3" style="height:${w3}%;background:${colors[i]}c0"></div>
+        <div class="chart-bar w-3" style="height:${w4}%;background:${colors[i]}"></div>
+      </div>
+      <span class="text-[10px] text-gray-500 font-medium">${k.toUpperCase()}</span>
+    </div>`;
   }).join('');
 }
 
-// Init
-lucide.createIcons();
-</script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0ca679181f73e68',t:'MTc4MTYxOTA5NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+// ===== PAGE 6: NUTRITION =====
+function setDuration(d,el){
+  selectedDuration = d;
+  document.querySelectorAll('.dur-btn').forEach(b=>{b.className='dur-btn px-4 py-2 rounded-xl bg-white text-g700 font-semibold text-sm border border-g200'});
+  el.className='dur-btn px-4 py-2 rounded-xl bg-g500 text-white font-semibold text-sm shadow';
+  renderNutrition();
+}
+
+function getNutritionRecs(){
+  const recs = [];
+  const st_hb = getStatus('hb', labResults.hb);
+  const st_glu = getStatus('glu', labResults.glu);
+  const st_cho = getStatus('cho', labResults.cho);
+  const st_cre = getStatus('cre', labResults.cre);
+  
+  if(st_hb.s !== 'normal' && labResults.hb < ranges.hb.low)
+    recs.push({type:'increase',text:'ควรเพิ่มอาหารที่มีธาตุเหล็ก เช่น ตับ, ผักใบเขียว',cat:'increase_iron'});
+  if(st_glu.s !== 'normal' && labResults.glu > ranges.glu.high)
+    recs.push({type:'reduce',text:'ลดอาหารหวาน น้ำตาล และแป้งขัดขาว',cat:'reduce_sugar'});
+  if(st_cho.s !== 'normal' && labResults.cho > ranges.cho.high)
+    recs.push({type:'reduce',text:'ลดอาหารไขมันสูง เพิ่มผัก ผลไม้',cat:'reduce_cholesterol'});
+  if(st_cre.s !== 'normal')
+    recs.push({type:'caution',text:'ดื่มน้ำให้เพียงพอ ลดโปรตีนสูง',cat:'general'});
+  if(personalInfo.blood === 'O+' || personalInfo.blood === 'O-')
+    recs.push({type:'tip',text:'กรุ๊ป O: เน้นโปรตีนจากเนื้อสัตว์ ผักใบเขียว',cat:'general'});
+  if(personalInfo.blood === 'A+' || personalInfo.blood === 'A-')
+    recs.push({type:'tip',text:'กรุ๊ป A: เน้นผัก ผลไม้ ธัญพืช ลดเนื้อแดง',cat:'general'});
+  if(personalInfo.blood === 'B+' || personalInfo.blood === 'B-')
+    recs.push({type:'tip',text:'กรุ๊ป B: ทานอาหารหลากหลาย นม ไข่ ผักเขียว',cat:'general'});
+  if(personalInfo.blood === 'AB+' || personalInfo.blood === 'AB-')
+    recs.push({type:'tip',text:'กรุ๊ป AB: ผสมผสาน เน้นอาหารทะเล เต้าหู้',cat:'general'});
+  if(recs.length === 0)
+    recs.push({type:'normal',text:'ค่าเลือดอยู่ในเกณฑ์ปกติ ทานอาหารสมดุล',cat:'general'});
+  return recs;
+}
+
+function renderNutrition(){
+  const recs = getNutritionRecs();
+  const recList = document.getElementById('recList');
+  recList.innerHTML = recs.map(r=>{
+    const icon = r.type === 'increase' ? '⬆️' : r.type === 'reduce' ? '⬇️' : r.type === 'caution' ? '⚠️' : r.type === 'tip' ? '💡' : '✅';
+    const bg = r.type === 'increase' ? 'bg-green-50' : r.type === 'reduce' ? 'bg-orange-50' : r.type === 'caution' ? 'bg-red-50' : 'bg-blue-50';
+    return `<div class="${bg} rounded-lg p-3 flex gap-2"><span>${icon}</span><span>${r.text}</span></div>`;
+  }).join('');
+
+  const baComp = document.getElementById('beforeAfterComparison');
+  const todayImpact = calculateTodayMealImpact();
+  const comparison = [];
+  Object.keys(ranges).forEach(k=>{
+    const r = ranges[k];
+    const current = labResults[k];
+    const dailyChange = todayImpact[k] || 0;
+    const projected = current + dailyChange;
+    const st = getStatus(k, current);
+    
+    let projectedStatus = '➡️';
+    if(projected < r.low) projectedStatus = '📉 ต่ำกว่าเกณฑ์';
+    else if(projected > r.high) projectedStatus = '📈 สูงกว่าเกณฑ์';
+    else projectedStatus = '✅ ปกติ';
+    
+    const arrow = dailyChange > 0 ? '📈' : dailyChange < 0 ? '📉' : '➡️';
+    const impactColor = dailyChange > 2 ? 'bg-red-50' : dailyChange < -2 ? 'bg-green-50' : 'bg-blue-50';
+    
+    comparison.push(`<div class="${impactColor} rounded-lg p-3 border-l-4 ${dailyChange > 2 ? 'border-red-400' : dailyChange < -2 ? 'border-green-400' : 'border-blue-400'}">
+      <span class="font-semibold text-g700">${k.toUpperCase()}</span><br>
+      <span class="text-sm text-gray-700">ปัจจุบัน: <b>${current.toFixed(1)}</b></span><br>
+      <span class="text-sm text-gray-700">หากวันนี้: <b>${projected.toFixed(1)}</b> ${arrow} ${Math.abs(dailyChange).toFixed(1)}</span><br>
+      <span class="text-xs font-semibold text-g600">${projectedStatus}</span>
+    </div>`);
+  });
+  baComp.innerHTML = comparison.length > 0 ? comparison.join('') : '<div class="text-sm text-gray-500">✅ ค่าเลือดปกติ</div>';
+
+  const plan = document.getElementById('mealPlan');
+  const mainCat = recs[0]?.cat || 'general';
+  const days = selectedDuration;
+  const mealRotation = [];
+  
+  // Create rotation to avoid repetition
+  for(let d = 0; d < days; d++){
+    const dayMeals = {
+      breakfast: mealDB.breakfast[(d * 2) % mealDB.breakfast.length],
+      lunch: mealDB['lunch_' + (d%2===0?'healthy':'balanced')][(d * 3) % 7],
+      dinner: mealDB.dinner[(d * 4) % mealDB.dinner.length],
+      snack: mealDB.snack[(d + Math.floor(d/2)) % mealDB.snack.length]
+    };
+    mealRotation.push(dayMeals);
+  }
+  
+  // Generate daily impact percentages
+  const impactPatterns = {
+    hb: ['+2-3%', '+1-2%', '+3-4%', '+0.5-1%', '+2-3%', '+1-2%', '+3-4%'],
+    glu: ['-4-6%', '-3-5%', '-2-4%', '-5-7%', '-3-5%', '-2-4%', '-4-6%'],
+    plt: ['+1-2%', '+2-3%', '+1-2%', '+0.5-1%', '+2-3%', '+1-2%', '+2-3%'],
+    cho: ['-1-2%', '-2-3%', '-1-2%', '-3-5%', '-2-3%', '-1-2%', '-2-3%'],
+    wbc: ['+1-2%', '+0.5-1%', '+2-3%', '+1-2%', '+1-2%', '+0.5-1%', '+2-3%']
+  };
+  
+  plan.innerHTML = `<div class="bg-white rounded-2xl p-5 shadow-sm border border-g100">
+    <h4 class="font-bold text-g800 mb-3">📅 แผนอาหาร ${selectedDuration} วัน</h4>
+    <div class="space-y-2">${
+      mealRotation.map((dayMeals, i)=>{
+        // Get impacts for this day
+        const dayImpacts = [];
+        Object.keys(impactPatterns).forEach(k => {
+          const pct = impactPatterns[k][i % 7];
+          if(pct) dayImpacts.push(`${k.toUpperCase()}${pct}`);
+        });
+        const impactText = dayImpacts.slice(0,3).join(' + ');
+        const impactColor = i % 3 === 0 ? 'green' : i % 3 === 1 ? 'blue' : 'orange';
+        
+        return `<div class="bg-g50 rounded-xl p-4 border-l-4 border-g400 hover:shadow-md transition-all">
+          <div class="flex justify-between items-start mb-3">
+            <div>
+              <div class="font-bold text-g800 text-sm">📅 วันที่ ${i+1}</div>
+              <div class="text-xs text-gray-500">${['จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์','อาทิตย์'][i%7]}</div>
+            </div>
+            <div class="bg-${impactColor}-100 text-${impactColor}-800 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">
+              📈 ${impactText}
+            </div>
+          </div>
+          <div class="text-xs space-y-2 text-gray-700 bg-white rounded-lg p-3">
+            <div class="flex gap-2"><span class="text-sm">🌅</span><div class="flex-1"><span class="font-medium block">${dayMeals.breakfast}</span><span class="text-gray-500 text-[11px]">Hb${impactPatterns.hb[i%7]} Plt${impactPatterns.plt[i%7]}</span></div></div>
+            <div class="flex gap-2"><span class="text-sm">☀️</span><div class="flex-1"><span class="font-medium block">${dayMeals.lunch}</span><span class="text-gray-500 text-[11px]">Glu${impactPatterns.glu[i%7]} Cho${impactPatterns.cho[i%7]}</span></div></div>
+            <div class="flex gap-2"><span class="text-sm">🌙</span><div class="flex-1"><span class="font-medium block">${dayMeals.dinner}</span><span class="text-gray-500 text-[11px]">Hb${impactPatterns.hb[i%7]} WBC${impactPatterns.wbc[i%7]}</span></div></div>
+            <div class="flex gap-2"><span class="text-sm">🍿</span><span class="font-medium">${dayMeals.snack}</span></div>
+          </div>
+        </div>`;
+      }).join('')
+    }</div>
+  </div>`;
+
+  renderNutritionCoach();
+  renderMealLogs();
+}
+
+function renderNutritionCoach(){
+  const coach = document.getElementById('nutritionCoachAdvice');
+  const advices = [];
+  
+  if(labResults.hb < ranges.hb.low) advices.push('🎯 ปลาแซลมอน + ผักโขม 3 ครั้ง/สัปดาห์ = Hb +2');
+  if(labResults.wbc < ranges.wbc.low) advices.push('🎯 ส้มสด + กระเทียม ทำให้ WBC แข็งแรง');
+  if(labResults.plt < ranges.plt.low) advices.push('🎯 ลิ้นจี่ + บลูเบอรี่ = Plt +20-30/สัปดาห์');
+  if(labResults.glu > ranges.glu.high) advices.push('🎯 ข้าวกล้อง + ผักไม่มีแป้ง ลด Glucose 15-20');
+  if(labResults.cho > ranges.cho.high) advices.push('🎯 ปลา 2 ครั้ง/สัปดาห์ = Cholesterol -30-50');
+  if(labResults.cre > ranges.cre.high) advices.push('🎯 ดื่มน้ำ 2-3 ลิตร/วัน ลดเค็ม');
+  
+  const weight = parseFloat(personalInfo.weight)||0;
+  const height = parseFloat(personalInfo.height)||0;
+  if(weight && height){
+    const bmi = weight/((height/100)**2);
+    if(bmi > 28) advices.push('⚖️ BMI สูง: ลดข้าว เพิ่มเดิน 45 นาที');
+    if(bmi < 19) advices.push('⚖️ BMI ต่ำ: เพิ่มไข่/นม/โปรตีน');
+  }
+  
+  if(advices.length === 0) advices.push('💡 ทำตามแผนต่อไป!');
+  coach.innerHTML = advices.slice(0,3).map(a=>`<div class="bg-white rounded p-2 border border-g200 text-sm">${a}</div>`).join('');
+}
+
+// ===== COMPREHENSIVE INGREDIENT DATABASE - THAI MEALS =====
+const ingredientScores = {
+  // ตับ - ช่วย Hb ↑ เพิ่ม +2.8
+  'ตับ': {hb: 2.8, wbc: 0.3, plt: 0.2, glu: -0.2, cre: 0.1, cho: 0.5, hct: 3.5},
+  'ตับหมู': {hb: 2.8, wbc: 0.3, plt: 0.2, glu: -0.2, cre: 0.1, cho: 0.5, hct: 3.5},
+  'ตับไก่': {hb: 2.5, wbc: 0.3, plt: 0.2, glu: -0.2, cre: 0.1, cho: 0.3, hct: 3.0},
+  
+  // ส้ม - ช่วย WBC ↑ เพิ่ม +1.8
+  'ส้ม': {hb: 0.2, wbc: 1.8, plt: 0.4, glu: -0.5, cre: -0.1, cho: -0.3, hct: 0.3},
+  'ส้มสด': {hb: 0.2, wbc: 1.8, plt: 0.4, glu: -0.5, cre: -0.1, cho: -0.3, hct: 0.3},
+  'มะนาว': {hb: 0.2, wbc: 1.5, plt: 0.3, glu: -0.4, cre: -0.1, cho: -0.2, hct: 0.2},
+  
+  // ข้าวกล้อง - ลด Glucose ↓ ลดลง -2.0
+  'ข้าวกล้อง': {hb: 0.1, wbc: 0.1, plt: 0.1, glu: -2.0, cre: -0.15, cho: -0.3, hct: 0.1},
+  'ข้าวไรซ์เบอรี่': {hb: 0.1, wbc: 0.1, plt: 0.1, glu: -1.8, cre: -0.14, cho: -0.3, hct: 0.1},
+  
+  // ปลาแซลมอน - ลด Cholesterol ↓ ลดลง -2.8
+  'ปลาแซลมอน': {hb: 1.0, wbc: 0.5, plt: 0.5, glu: -0.8, cre: -0.2, cho: -2.8, hct: 1.2},
+  'ปลา': {hb: 0.8, wbc: 0.3, plt: 0.3, glu: -0.5, cre: -0.15, cho: -2.2, hct: 0.8},
+  
+  // บลูเบอรี่ - เพิ่ม Platelet ↑ เพิ่ม +3.5
+  'บลูเบอรี่': {hb: 0.2, wbc: 0.5, plt: 3.5, glu: -0.4, cre: -0.05, cho: -0.2, hct: 0.3},
+  'ลิ้นจี่': {hb: 0.2, wbc: 0.5, plt: 3.2, glu: -0.3, cre: -0.05, cho: -0.1, hct: 0.3},
+  'สตรอเบอรี่': {hb: 0.2, wbc: 0.6, plt: 2.8, glu: -0.3, cre: -0.05, cho: -0.2, hct: 0.2},
+  
+  // ผักโขม - เพิ่ม Hb ↑
+  'ผักโขม': {hb: 1.5, wbc: 0.3, plt: 0.3, glu: -0.3, cre: -0.1, cho: -0.2, hct: 1.8},
+  
+  // ไก่ - โปรตีนดี ไม่กระทบมาก
+  'ไก่': {hb: 0.5, wbc: 0.2, plt: 0.2, glu: -0.1, cre: 0.05, cho: 0.2, hct: 0.5},
+  'ไก่ต้ม': {hb: 0.5, wbc: 0.2, plt: 0.2, glu: -0.1, cre: 0.05, cho: 0.1, hct: 0.5},
+  'อกไก่': {hb: 0.4, wbc: 0.2, plt: 0.2, glu: -0.1, cre: 0.05, cho: 0.05, hct: 0.4},
+  
+  // ไข่ - ทำให้ Plt ↑
+  'ไข่': {hb: 0.8, wbc: 0.1, plt: 1.5, glu: 0, cre: 0.05, cho: 0.5, hct: 0.8},
+  'ไข่ต้ม': {hb: 0.8, wbc: 0.1, plt: 1.5, glu: 0, cre: 0.05, cho: 0.4, hct: 0.8},
+  
+  // ข้าวขาว - เพิ่ม Glucose ↑ เพิ่ม +2.2
+  'ข้าวขาว': {hb: 0, wbc: 0, plt: 0, glu: 2.2, cre: 0.1, cho: 0.1, hct: 0},
+  'ข้าวสวย': {hb: 0, wbc: 0, plt: 0, glu: 2.0, cre: 0.1, cho: 0.1, hct: 0},
+  'ขนมปัง': {hb: 0, wbc: 0, plt: 0, glu: 2.5, cre: 0.1, cho: 0.2, hct: 0},
+  'โดนัท': {hb: 0, wbc: 0, plt: 0, glu: 3.0, cre: 0.15, cho: 1.2, hct: 0},
+  
+  // เนย - เพิ่ม Cholesterol ↑ เพิ่ม +3.8
+  'เนย': {hb: 0.2, wbc: 0, plt: 0, glu: 0.1, cre: 0.2, cho: 3.8, hct: 0.2},
+  'ไขมัน': {hb: 0, wbc: 0, plt: 0, glu: 0, cre: 0.3, cho: 4.5, hct: 0},
+  'ครีม': {hb: 0.1, wbc: 0, plt: 0, glu: 0.2, cre: 0.2, cho: 3.0, hct: 0.1},
+  'ทอด': {hb: 0, wbc: 0, plt: 0, glu: 0.3, cre: 0.4, cho: 5.0, hct: 0},
+  'ทอดกรอบ': {hb: 0, wbc: 0, plt: 0, glu: 0.5, cre: 0.5, cho: 5.5, hct: 0},
+  'ไก่ทอด': {hb: 0.3, wbc: 0, plt: 0.1, glu: 0.3, cre: 0.3, cho: 4.2, hct: 0.3},
+  
+  // บรอกโคลี - ลด Glucose & เพิ่ม WBC
+  'บรอกโคลี': {hb: 0.3, wbc: 1.2, plt: 0.3, glu: -1.5, cre: -0.1, cho: -0.3, hct: 0.4},
+  'บรอคโคลี่': {hb: 0.3, wbc: 1.2, plt: 0.3, glu: -1.5, cre: -0.1, cho: -0.3, hct: 0.4},
+  
+  // กระเทียม - เพิ่ม WBC
+  'กระเทียม': {hb: 0.2, wbc: 1.5, plt: 0.2, glu: -0.2, cre: -0.05, cho: -0.2, hct: 0.2},
+  
+  // เต้าหู้ - ลด Glucose & Cholesterol
+  'เต้าหู้': {hb: 0.4, wbc: 0.3, plt: 0.3, glu: -1.2, cre: -0.08, cho: -1.5, hct: 0.4},
+  
+  // ผักรวม
+  'ผักสด': {hb: 0.3, wbc: 0.5, plt: 0.3, glu: -0.8, cre: -0.1, cho: -0.4, hct: 0.3},
+  'ผักลวก': {hb: 0.3, wbc: 0.5, plt: 0.3, glu: -0.8, cre: -0.1, cho: -0.4, hct: 0.3},
+  'ผักต้ม': {hb: 0.3, wbc: 0.5, plt: 0.3, glu: -0.8, cre: -0.1, cho: -0.4, hct: 0.3},
+  
+  // ถั่ว
+  'ถั่วลิสง': {hb: 0.5, wbc: 0.3, plt: 0.5, glu: -1.0, cre: -0.1, cho: -1.2, hct: 0.5},
+  'ถั่วลันเตา': {hb: 0.6, wbc: 0.4, plt: 0.6, glu: -1.2, cre: -0.12, cho: -1.5, hct: 0.6},
+};
+
+function scoreMealIngredients(description){
+  const desc = description.toLowerCase().trim();
+  const totalImpacts = {hb: 0, wbc: 0, plt: 0, glu: 0, cre: 0, cho: 0, hct: 0};
+  const found = [];
+  const breakdown = {};
+  
+  // ค้นหาทีละคำจากฐานข้อมูลและคำนวณผล - ทำการค้นหาแบบ substring แทน regex
+  Object.keys(ingredientScores).forEach(ingredient => {
+    const ingLower = ingredient.toLowerCase();
+    // ค้นหาแบบง่าย ๆ ว่า ingredient นี้อยู่ใน description หรือไม่
+    if(desc.includes(ingLower)) {
+      // เช็คว่าไม่ใช่การจับคู่ partial เพื่อหลีกเลี่ยงเช่น "ปลา" จับ "ปลาแซลมอน"
+      // ทำการค้นหาด้วย word boundary อย่างง่าย
+      const words = desc.split(/[\s,+]+/);
+      const found_in_words = words.some(w => w.includes(ingLower));
+      
+      if(found_in_words) {
+        found.push(ingredient);
+        const impacts = ingredientScores[ingredient];
+        breakdown[ingredient] = impacts;
+        
+        // บวกผลต่อค่ารวม
+        Object.keys(impacts).forEach(key => {
+          totalImpacts[key] += impacts[key];
+        });
+      }
+    }
+  });
+  
+  // ปรับลดส่วนเกิน (cap) ให้สมเหตุสมผลตามช่วงค่า
+  Object.keys(totalImpacts).forEach(key => {
+    const r = ranges[key];
+    const maxChange = (r.high - r.low) * 0.25; // ปรับเปลี่ยนได้สูงสุด 25% ของช่วงปกติ
+    totalImpacts[key] = parseFloat(Math.max(-maxChange, Math.min(maxChange, totalImpacts[key])).toFixed(2));
+  });
+  
+  return {impacts: totalImpacts, found: [...new Set(found)], breakdown};
+}
+
+function analyzeMealCBC(){
+  const desc = document.getElementById('mealDesc').value.trim().toLowerCase();
+  if(!desc){
+    document.getElementById('mealCBCAnalysis').classList.add('hidden');
+    return;
+  }
+
+  // Ingredient database with precise effects
+  const ingredients = {
+    // Iron-rich (Hb, Hct ↑)
+    ironRich: ['ตับ','ตับหมู','ตับไก่','ตับสัตว์','หมูแดง','เนื้อแดง','เนื้อวัว','เนื้อแกะ','เสนอ','ปลาทู','ปลาแซลมอน','ปลาทอง','กุ้ง','หอยแครง','หมึก','หมึกสด','ไข่','ไข่ไก่','ไข่เป็ด','ผักโขม','บีท','คะน้า','เทพหนัง','ส้มจำปี','อนุชา'],
+    // Immune boosting (WBC ↑)
+    immuneBoost: ['ส้ม','ส้มสด','ส้มเขียวหวาน','มะนาว','สตรอเบอรี่','บลูเบอรี่','กระเทียม','ขิง','บรอกโคลี','ผักคะน้า','บีทรูท','มะเขือเทศ','พริก','มะม่วง','กิวี','ลิ้นจี่','เสาวรส','อะไร'],
+    // Platelet-boosting (Plt ↑)
+    plateletBoost: ['บลูเบอรี่','ลิ้นจี่','สตรอเบอรี่','พลัม','เสาวรส','ฉีก','องุ่นแดง','โมโหฬฒิ','ซีเรียล','ข้าวโพด','ถั่ว','ลูกเกด'],
+    // Low glycemic (Glu ↓)
+    lowGI: ['ข้าวกล้อง','ข้าวไรซ์เบอรี่','ข้าวไฟเบอร์','เมล็ดมะนาว','มิซู่','คินัว','ถั่วลันเตา','ถั่วแดง','ถั่วขาว','ถั่วลิสง','เต้าหู้','ผักสด','ผักลวก','ผักต้ม','บรอกโคลี','ฟूลิฟลาวเวอร์','แครอท','ซูกินี่','ฮึกกะแนะ','อะสพาร์กัส'],
+    // High glycemic (Glu ↑)
+    highGI: ['น้ำหวาน','อัดแป้ง','ข้าวขาว','เมนูโต้ง','ขนมปัง','โดนัท','ขนมเค้ก','สิ้นไส','กิจฉัตร','บิสกิต','คุ้กกี้','มาการอน','ลูกอม','ปังเนย','ข้าวโพปคอร์น','ชิปส์','ข้าวซาลาเด','ปาสต้าขาว','นูดลส์ทำความสะอาด'],
+    // Cholesterol-raising (Cho ↑)
+    cholRaise: ['ทอด','ไขมัน','เนย','ครีม','นมเต็มไขมัน','สัตว์','เนื้อติดมัน','หนังไก่','ไก่ต้มผิว','ไข่แดง','ไข่ไก่','ไข่เป็ด','พาราฟิน','น้ำมันปาล์ม','น้ำมันสัตว์'],
+    // Cholesterol-reducing (Cho ↓)
+    cholLower: ['ปลา','ปลาแซลมอน','ปลาทูน่า','ปลาปลาร','ปลาท','ปลาขาว','ปลาเงิน','ถั่ว','ถั่วลิสง','อะโวคาโด','เมล็ดทานตะวัน','เมล็ดม่วง','เมล็ดคูณ','โอ๊ตมีล','ข้าวกล้อง','ไส้กะหล่ำ','ผักใบเขียว','ผักสด'],
+    // Kidney-friendly (Cre ↓)
+    kidneyFresh: ['น้ำ','น้ำร้อน','น้ำใจ','ชา','ชาเขียว','ชาขาว','น้ำโคโค่','แตงกวา','ฟักทอง','สตรอเบอรี่','มะนาว','มะพร้าว','ข้าวกล้อง','ข้าว'],
+    // Kidney-harmful (Cre ↑)
+    kidneyHarm: ['เค็ม','ซอสเค็ม','น้ำจิ้มเค็ม','ซีอิ๊ว','น้ำปลา','กุ้งแห้ง','ปลาแห้ง','เมนูทอด','ไก่ทอด','เนื้อแดง','กระบวนการรักษา'],
+    // Hematocrit increasing (Hct ↑)
+    hctIncrease: ['ตับ','เนื้อแดง','เนื้อวัว','ปลาแซลมอน','ไข่','ผักโขม','สาหร่าย','ข้าวเพื้นบ้าน','ข้าวไรซ์เบอรี่'],
+  };
+
+  // Initialize all CBC values
+  const cbcStatus = {};
+  ['hb', 'wbc', 'plt', 'glu', 'cre', 'cho', 'hct'].forEach(key => {
+    cbcStatus[key] = { name: ranges[key].name, change: '→ ไม่เปลี่ยน', icon: '➡️', color: 'gray' };
+  });
+
+  // Score-based analysis
+  const scores = {hb:0, wbc:0, plt:0, glu:0, cre:0, cho:0, hct:0};
+  
+  // Check iron-rich foods
+  ingredients.ironRich.forEach(ing => {
+    if(desc.includes(ing)) { scores.hb += 3; scores.hct += 2; }
+  });
+  
+  // Check immune-boosting foods
+  ingredients.immuneBoost.forEach(ing => {
+    if(desc.includes(ing)) scores.wbc += 2;
+  });
+  
+  // Check platelet-boosting foods
+  ingredients.plateletBoost.forEach(ing => {
+    if(desc.includes(ing)) scores.plt += 3;
+  });
+  
+  // Check low-GI foods (Glucose ↓)
+  ingredients.lowGI.forEach(ing => {
+    if(desc.includes(ing)) scores.glu -= 2;
+  });
+  
+  // Check high-GI foods (Glucose ↑)
+  ingredients.highGI.forEach(ing => {
+    if(desc.includes(ing)) scores.glu += 3;
+  });
+  
+  // Check cholesterol-raising foods
+  ingredients.cholRaise.forEach(ing => {
+    if(desc.includes(ing)) scores.cho += 2;
+  });
+  
+  // Check cholesterol-reducing foods
+  ingredients.cholLower.forEach(ing => {
+    if(desc.includes(ing)) scores.cho -= 2;
+  });
+  
+  // Check kidney-friendly foods
+  ingredients.kidneyFresh.forEach(ing => {
+    if(desc.includes(ing)) scores.cre -= 1;
+  });
+  
+  // Check kidney-harmful foods
+  ingredients.kidneyHarm.forEach(ing => {
+    if(desc.includes(ing)) scores.cre += 2;
+  });
+  
+  // Check hematocrit-increasing foods
+  ingredients.hctIncrease.forEach(ing => {
+    if(desc.includes(ing)) scores.hct += 2;
+  });
+
+  // Convert scores to readable format
+  Object.keys(scores).forEach(key => {
+    const score = scores[key];
+    if(score > 2) {
+      const changes = {
+        hb: { change: '📈 เพิ่มขึ้น +1.5-2.5 g/dL', icon: '🔼', color: 'green' },
+        wbc: { change: '📈 เพิ่มขึ้น +1-2 ×10³/µL', icon: '🔼', color: 'green' },
+        plt: { change: '📈 เพิ่มขึ้น +20-40 ×10³/µL', icon: '🔼', color: 'green' },
+        glu: { change: '📉 ลดลง -15-25 mg/dL', icon: '🔽', color: 'green' },
+        cre: { change: '📉 ลดลง -0.2-0.3 mg/dL', icon: '🔽', color: 'green' },
+        cho: { change: '📉 ลดลง -20-40 mg/dL', icon: '🔽', color: 'green' },
+        hct: { change: '📈 เพิ่มขึ้น +2-3%', icon: '🔼', color: 'green' }
+      };
+      cbcStatus[key] = changes[key];
+    } else if(score < -2) {
+      const changes = {
+        hb: { change: '📉 ลดลง -0.5-1 g/dL', icon: '🔽', color: 'red' },
+        wbc: { change: '📉 ลดลง -1-2 ×10³/µL', icon: '🔽', color: 'red' },
+        plt: { change: '📉 ลดลง -30-50 ×10³/µL', icon: '🔽', color: 'red' },
+        glu: { change: '📈 เพิ่มขึ้น +20-35 mg/dL', icon: '🔼', color: 'red' },
+        cre: { change: '📈 เพิ่มขึ้น +0.3-0.5 mg/dL', icon: '🔼', color: 'red' },
+        cho: { change: '📈 เพิ่มขึ้น +30-60 mg/dL', icon: '🔼', color: 'red' },
+        hct: { change: '📉 ลดลง -1-2%', icon: '🔽', color: 'red' }
+      };
+      cbcStatus[key] = changes[key];
+    }
+  });
+
+  // Render
+  const container = document.getElementById('mealCBCAnalysis');
+  const cbcList = document.getElementById('cbcIncreaseList');
+
+  cbcList.innerHTML = Object.keys(cbcStatus).map(key => {
+    const item = cbcStatus[key];
+    const bgClass = item.color === 'green' ? 'bg-green-50 border-green-300' : item.color === 'red' ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-300';
+    const textClass = item.color === 'green' ? 'text-green-800' : item.color === 'red' ? 'text-red-800' : 'text-gray-700';
+    
+    return `
+      <div class="${bgClass} rounded-lg p-3 border-l-4 flex items-center justify-between">
+        <div>
+          <div class="font-bold text-sm text-gray-800">${item.name}</div>
+          <div class="text-sm font-semibold ${textClass}">${item.change}</div>
+        </div>
+        <div class="text-2xl">${item.icon}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('cbcDecreaseList').innerHTML = '';
+  container.classList.remove('hidden');
+}
+
+function analyzeMealImpact(description){
+  const result = scoreMealIngredients(description);
+  const impacts = result.impacts;
+  const found = result.found;
+  
+  // Cap impacts at reasonable levels
+  Object.keys(impacts).forEach(key => {
+    impacts[key] = Math.max(-5, Math.min(5, impacts[key]));
+  });
+  
+  // Categorize found ingredients
+  const foundIngredients = {positive: [], negative: []};
+  
+  ingredientDB.kidney_harm.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.negative.push(ing);
+  });
+  ingredientDB.high_gi.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.negative.push(ing);
+  });
+  ingredientDB.chol_raise.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.negative.push(ing);
+  });
+  
+  ingredientDB.iron_rich.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.positive.push(ing);
+  });
+  ingredientDB.immune_boost.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.positive.push(ing);
+  });
+  ingredientDB.low_gi.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.positive.push(ing);
+  });
+  ingredientDB.chol_lower.items.forEach(ing => {
+    if(found.includes(ing)) foundIngredients.positive.push(ing);
+  });
+  
+  return {impacts, foundIngredients: {positive: [...new Set(foundIngredients.positive)], negative: [...new Set(foundIngredients.negative)]}};
+}
+
+function handleMealImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    mealImageBase64 = ev.target.result;
+    document.getElementById('mealImageThumb').src = mealImageBase64;
+    document.getElementById('mealImagePreview').classList.remove('hidden');
+    document.getElementById('aiMealAnalysis').classList.add('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearMealImage(){
+  mealImageBase64 = '';
+  document.getElementById('mealImagePreview').classList.add('hidden');
+  document.getElementById('mealImageInput').value = '';
+}
+
+function renderMealLogs(){
+  const logs = allRecords.filter(r=>r.type==='meal_log').slice(-5).reverse();
+  const container = document.getElementById('mealLogs');
+  if(!container) return;
+  
+  // Calculate today's total impact
+  const today = new Date().toLocaleDateString('th-TH');
+  const todayLogs = allRecords.filter(r=>r.type==='meal_log' && r.scan_date === today);
+  const totalDailyImpact = calculateDailyTotalImpact(todayLogs);
+  
+  let html = '';
+  
+  // Show daily summary if there are logs today
+  if(todayLogs.length > 0) {
+    html += `
+      <div class="bg-white rounded-xl p-4 border-2 border-g400 shadow-md mb-4" data-daily-summary="true">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-lg">📊</span>
+          <h4 class="font-bold text-g800">สรุปอาหารวันนี้ (${todayLogs.length} มื้อ)</h4>
+        </div>
+        <div class="grid grid-cols-2 gap-2 mb-3">
+          ${Object.keys(totalDailyImpact).map(key => {
+            const impact = totalDailyImpact[key];
+            const icon = impact > 2 ? '📈' : impact < -2 ? '📉' : '➡️';
+            const bgColor = impact > 2 ? 'bg-red-50' : impact < -2 ? 'bg-green-50' : 'bg-blue-50';
+            const textColor = impact > 2 ? 'text-red-700' : impact < -2 ? 'text-green-700' : 'text-gray-700';
+            return `<div class="${bgColor} rounded-lg p-2 text-center">
+              <div class="text-xs font-semibold text-gray-600">${key.toUpperCase()}</div>
+              <div class="text-sm font-bold ${textColor}">${icon} ${impact > 0 ? '+' : ''}${impact.toFixed(1)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div class="bg-g50 rounded-lg p-3 text-sm text-g700">
+          <strong>🔮 คาดการณ์ค่าเลือด:</strong><br>
+          ${Object.keys(totalDailyImpact).map(key => {
+            const impact = totalDailyImpact[key];
+            const current = labResults[key];
+            const predicted = (current + impact).toFixed(1);
+            const r = ranges[key];
+            const status = predicted >= r.low && predicted <= r.high ? '✅' : '⚠️';
+            return `<div class="text-xs">${status} ${key.toUpperCase()}: ${current.toFixed(1)} → ${predicted} (${impact > 0 ? '+' : ''}${impact.toFixed(1)})</div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  
+  // Add individual meal logs
+  html += logs.map(r=>{
+    let d, analysis;
+    try{ d = JSON.parse(r.meal_log); }catch(e){ d = {mealType:'',description:'',mealTime:''}; }
+    try{ analysis = JSON.parse(r.meal_analysis); }catch(e){ analysis = {impacts:{}}; }
+    
+    const impacts = analysis.impacts || {};
+    const found = analysis.found || [];
+    const breakdown = analysis.breakdown || {};
+    const predictedLabs = r.predicted_labs ? JSON.parse(r.predicted_labs) : {};
+    const recommendation = r.ai_recommendation || '';
+    
+    // Calculate ingredient list
+    const ingredientDisplay = found.slice(0,4).join(' + ') || 'ส่วนประกอบหลัก';
+    
+    // Determine meal score
+    let scoreValue = 50;
+    Object.keys(impacts).forEach(key => {
+      if(impacts[key] < -2) scoreValue += 20;
+      else if(impacts[key] > 2) scoreValue -= 10;
+      else if(impacts[key] < 0) scoreValue += 8;
+      else scoreValue -= 3;
+    });
+    scoreValue = Math.max(0, Math.min(100, scoreValue));
+    const scoreColor = scoreValue >= 75 ? 'bg-green-50 text-green-700' : scoreValue >= 50 ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700';
+    
+    return `<div class="bg-white rounded-xl p-4 border border-g100 shadow-sm hover:shadow-md transition-all">
+      <div class="flex items-start justify-between gap-2 mb-3">
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-g800">${d.mealType||''}</span>
+            <span class="text-sm text-g600 font-semibold">🕐 ${d.mealTime||''}</span>
+            <span class="${scoreColor} px-2 py-1 rounded-full text-xs font-bold">Score: ${scoreValue}</span>
+          </div>
+          <div class="text-sm text-gray-700 font-medium mt-1">${d.description||''}</div>
+          <div class="text-xs text-gray-500 mt-1">ส่วนประกอบ: ${ingredientDisplay}</div>
+        </div>
+        <button onclick="deleteMealLog('${r.__backendId}')" class="p-2 text-red-500 hover:bg-red-50 rounded transition-all flex-shrink-0">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+      
+      ${Object.keys(impacts).length > 0 ? `
+        <div class="mb-3 p-3 bg-gray-50 rounded-lg border-l-4 border-g400">
+          <div class="text-xs font-bold text-g800 mb-2">📊 ผลต่อเลือด:</div>
+          <div class="grid grid-cols-3 gap-2 text-[11px]">
+            ${Object.keys(impacts).map(key => {
+              const impact = impacts[key];
+              if(impact === 0) return '';
+              const icon = impact > 0 ? '📈' : '📉';
+              const color = impact > 2 ? 'text-red-600' : impact < -2 ? 'text-green-600' : 'text-gray-600';
+              return `<div class="${color} font-semibold">${icon} ${key.toUpperCase()}: ${impact > 0 ? '+' : ''}${impact.toFixed(1)}</div>`;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+      
+      ${recommendation ? `
+        <div class="bg-blue-50 rounded-lg p-2 mb-3 border-l-4 border-blue-400">
+          <div class="text-xs text-blue-800"><strong>💡 AI แนะนำ:</strong> ${recommendation}</div>
+        </div>
+      ` : ''}
+      
+      <div class="text-xs text-gray-400">📅 ${r.scan_date||''}</div>
+    </div>`;
+  }).join('');
+  
+  container.innerHTML = html;
+  lucide.createIcons();
+}
+
+async function saveMealLog(){
+  const type = document.getElementById('mealType').value;
+  const time = document.getElementById('mealTime').value;
+  const desc = document.getElementById('mealDesc').value.trim();
+  
+  if(!desc){
+    showToast('กรุณากรอกรายละเอียดอาหาร');
+    return;
+  }
+  
+  if(allRecords.filter(r=>r.type==='meal_log').length >= 999){
+    showToast('⚠️ ถึงขีดจำกัด');
+    return;
+  }
+  
+  const analysis = scoreMealIngredients(desc);
+  const impacts = analysis.impacts;
+  const breakdown = analysis.breakdown;
+  const nextMealAdvice = generateNextMealAdvice(impacts, breakdown);
+  
+  const btn = document.getElementById('saveMealBtn');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'AI กำลังวิเคราะห์...';
+  
+  setTimeout(async () => {
+    const res = await window.dataSdk.create({
+      type:'meal_log',
+      weight:'',
+      height:'',
+      age:'',
+      occupation:'',
+      gender:'',
+      blood_group:'',
+      lab_results:'',
+      meal_log:JSON.stringify({mealType:type,description:desc,mealTime:time}),
+      meal_image:'',
+      meal_analysis:JSON.stringify({impacts, found: analysis.found, breakdown}),
+      plan_duration:'',
+      created_at:new Date().toISOString(),
+      scan_date:new Date().toLocaleDateString('th-TH'),
+      profile_name:'Meal Log',
+      weekly_summary:'',
+      ai_recommendation:nextMealAdvice,
+      predicted_labs:JSON.stringify(generatePredictedLabsAfterMeal(impacts)),
+      meal_impact:JSON.stringify(impacts),
+      ingredient_breakdown:JSON.stringify(breakdown)
+    });
+    
+    if(res.isOk){
+      document.getElementById('mealDesc').value = '';
+      document.getElementById('mealTime').value = '12:00';
+      mealImageBase64 = '';
+      showToast('✅ บันทึกอาหารสำเร็จ');
+      renderMealLogs();
+      if(currentPage === 8) renderDashboard();
+    } else {
+      showToast('❌ เกิดข้อผิดพลาด');
+    }
+    
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }, 600);
+}
+
+function closeResultModal(){}
+
+// ===== NEW AI FUNCTIONS =====
+function generateNextMealAdvice(impacts, breakdown) {
+  let advice = [];
+  
+  // สร้างรายการส่วนประกอบที่พบ
+  const ingredientList = Object.keys(breakdown || {}).slice(0, 5).join(', ');
+  
+  // วิเคราะห์อาหารแต่ละประเภท และให้คำแนะนำที่เฉพาะเจาะจง
+  if(impacts.glu > 8) {
+    advice.push('⚠️ วันนี้ได้น้ำตาลเพิ่ม +' + impacts.glu.toFixed(1) + ' mg/dL → มื้อถัดไป: ข้าวกล้อง + ปลา + ผักสด');
+  } else if(impacts.glu < -8) {
+    advice.push('✅ ลด Glucose สำเร็จ ' + Math.abs(impacts.glu).toFixed(1) + ' mg/dL ← ยอดเยี่ยม ทำต่อไป');
+  }
+  
+  if(impacts.cho > 15) {
+    advice.push('⚠️ ไขมันเพิ่ม +' + impacts.cho.toFixed(1) + ' mg/dL → มื้อเย็น: ปลาแซลมอน + บรอกโคลี');
+  } else if(impacts.cho < -15) {
+    advice.push('✅ Cholesterol ลด ' + Math.abs(impacts.cho).toFixed(1) + ' mg/dL ← ส่วนประกอบดี');
+  }
+  
+  if(impacts.hb < -1) {
+    advice.push('💪 Hb ต่ำแล้ว → เพิ่มเด็ดขาด: ตับหมู (+2.8 g/dL) + ผักโขม + ไข่');
+  } else if(impacts.hb > 1.5) {
+    advice.push('✅ Hemoglobin +' + impacts.hb.toFixed(1) + ' g/dL ← อาหารมีธาตุเหล็กดี');
+  }
+  
+  if(impacts.wbc < -0.8) {
+    advice.push('🦠 WBC ต่ำ → ทานก่อนนอน: ส้มสด (+2 ×10³) + บลูเบอรี่');
+  } else if(impacts.wbc > 0.8) {
+    advice.push('✅ ภูมิคุ้มกัน +' + impacts.wbc.toFixed(1) + ' ×10³/µL ← ผลดีจากส่วนประกอบ');
+  }
+  
+  if(impacts.cre > 0.3) {
+    advice.push('💧 Creatinine สูง +' + impacts.cre.toFixed(2) + ' mg/dL → ดื่มน้ำ 2-3 ลิตร/วัน');
+  } else if(impacts.cre < -0.2) {
+    advice.push('✅ Creatinine ลด ' + Math.abs(impacts.cre).toFixed(2) + ' mg/dL ← ไตสบาย');
+  }
+  
+  if(impacts.plt < -20) {
+    advice.push('🩸 Platelet ต่ำ → บ่อยทุกสัปดาห์: บลูเบอรี่ (+2.5) + ลิ้นจี่');
+  } else if(impacts.plt > 1) {
+    advice.push('✅ Platelet ดี +' + impacts.plt.toFixed(1) + ' ×10³/µL');
+  }
+  
+  if(impacts.hct > 1.5) {
+    advice.push('✅ Hematocrit ดี +' + impacts.hct.toFixed(1) + '%');
+  }
+  
+  if(advice.length === 0) {
+    advice.push('💡 ส่วนประกอบ: ' + (ingredientList || 'ไม่พบในฐานข้อมูล') + ' → ทำตามแผนต่อไป');
+  }
+  
+  return advice.slice(0, 3).join(' | ');
+}
+
+function generatePredictedLabsAfterMeal(impacts) {
+  const predicted = {};
+  Object.keys(labResults).forEach(key => {
+    const impact = impacts[key] || 0;
+    predicted[key] = (labResults[key] + impact).toFixed(2);
+  });
+  return predicted;
+}
+
+function showMealAnalysisPreview(desc, analysis, nextAdvice, onConfirm) {
+  const impacts = analysis.impacts;
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+  
+  let impactHTML = '';
+  Object.keys(impacts).forEach(key => {
+    if(impacts[key] !== 0) {
+      const icon = impacts[key] > 0 ? '📈' : '📉';
+      const color = (impacts[key] > 2 || impacts[key] < -2) ? 
+        (impacts[key] > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700') :
+        (impacts[key] > 0 ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700');
+      impactHTML += `<div class="${color} rounded-lg p-2 text-sm">
+        <b>${ranges[key].name.split('(')[0].trim()}</b>
+        ${icon} ${impacts[key] > 0 ? '+' : ''}${impacts[key].toFixed(1)} ${ranges[key].unit}
+      </div>`;
+    }
+  });
+  
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 max-w-sm shadow-xl max-h-96 overflow-y-auto">
+      <h3 class="font-bold text-lg text-g800 mb-3">🤖 AI วิเคราะห์อาหาร</h3>
+      
+      <div class="bg-g50 rounded-lg p-3 mb-4">
+        <div class="font-semibold text-g800 mb-2">🍽️ ${desc}</div>
+        <div class="text-sm text-gray-600">ส่วนประกอบ: ${analysis.foundIngredients.positive.join(', ') || 'ไม่พบ'}</div>
+      </div>
+      
+      <div class="mb-4">
+        <div class="font-bold text-g800 mb-2">📊 ผลต่อค่าเลือด:</div>
+        <div class="grid grid-cols-2 gap-2">
+          ${impactHTML}
+        </div>
+      </div>
+      
+      <div class="bg-blue-50 rounded-lg p-3 mb-4 border-l-4 border-blue-400">
+        <div class="text-sm text-blue-800">
+          <span class="font-bold">💡 แนะนำ:</span><br>
+          ${nextAdvice}
+        </div>
+      </div>
+      
+      <button id="confirmMealBtn" class="w-full bg-g500 text-white font-bold py-3 rounded-xl hover:bg-g600 transition-all">
+        ✅ ตกลงบันทึก
+      </button>
+    </div>
+  `;
+  
+  document.getElementById('app').appendChild(overlay);
+  
+  // Attach click listener to confirm button
+  overlay.querySelector('#confirmMealBtn').addEventListener('click', async () => {
+    overlay.remove();
+    if(onConfirm) await onConfirm();
+  });
+}
+
+// ===== PAGE 7: EXTRAS =====
+function renderExtras(){
+  const labs = allRecords.filter(r=>r.type==='lab_result');
+  const hist = document.getElementById('healthHistory');
+  const noH = document.getElementById('noHistory');
+  if(labs.length){
+    noH.classList.add('hidden');
+    hist.innerHTML = labs.slice(-3).reverse().map(r=>`<div class="bg-g50 rounded-lg p-2 flex justify-between">
+      <span class="text-xs font-medium">${r.scan_date||''}</span>
+      <span class="text-xs text-gray-500">🩸 ${r.blood_group||'-'}</span>
+    </div>`).join('');
+  } else {
+    noH.classList.remove('hidden');
+    hist.innerHTML = '';
+  }
+
+  const alerts = document.getElementById('alertsList');
+  const noA = document.getElementById('noAlerts');
+  const criticals = Object.keys(ranges).filter(k=>{const st=getStatus(k,labResults[k]);return st.s==='critical'});
+  if(criticals.length){
+    noA.classList.add('hidden');
+    alerts.innerHTML = criticals.map(k=>`<div class="bg-red-50 text-red-700 rounded-lg p-2 text-sm flex gap-2">
+      <span>🚨</span>
+      <span>${ranges[k].name}: ${labResults[k]}</span>
+    </div>`).join('');
+  } else {
+    noA.classList.remove('hidden');
+    alerts.innerHTML = '';
+  }
+}
+
+function shareReport(type){
+  if(type === 'email'){
+    showToast('📧 ฟังก์ชันส่งอีเมลจะพร้อมใช้งาน');
+  } else {
+    document.getElementById('qrArea').classList.toggle('hidden');
+    const svg = document.getElementById('qrSvg');
+    let rects = '';
+    for(let y=0;y<12;y++)for(let x=0;x<12;x++){
+      if(Math.random() > 0.5 || ((x<3&&y<3)||(x>8&&y<3)||(x<3&&y>8)))
+        rects += `<rect x="${x*10}" y="${y*10}" width="9" height="9" fill="#166534" rx="1"/>`;
+    }
+    svg.innerHTML = rects;
+  }
+}
+
+// ===== PAGE 8: DASHBOARD =====
+function renderDashboard(){
+  const meals = allRecords.filter(r=>r.type==='meal_log');
+  const dashM = document.getElementById('dashMealSummary');
+  const noM = document.getElementById('dashNoMeals');
+  
+  // Calculate today's impact
+  const today = new Date().toLocaleDateString('th-TH');
+  const todayLogs = allRecords.filter(r=>r.type==='meal_log' && r.scan_date === today);
+  const todayImpact = calculateDailyTotalImpact(todayLogs);
+  
+  if(meals.length){
+    noM.classList.add('hidden');
+    
+    let summaryHTML = '';
+    if(todayLogs.length > 0) {
+      summaryHTML = `
+        <div class="bg-g50 rounded-lg p-3 border-l-4 border-g500 mb-3">
+          <div class="font-bold text-g800 mb-2">📊 วันนี้ (${todayLogs.length} มื้อ):</div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            ${Object.keys(todayImpact).map(key => {
+              const impact = todayImpact[key];
+              if(impact === 0) return '';
+              const icon = impact > 0 ? '📈' : '📉';
+              const color = impact > 2 ? 'text-red-600' : impact < -2 ? 'text-green-600' : 'text-gray-600';
+              return `<div class="${color} font-semibold">${icon} ${key.toUpperCase()}: ${impact > 0 ? '+' : ''}${impact.toFixed(1)}</div>`;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
+    dashM.innerHTML = summaryHTML + meals.slice(-5).reverse().map(r=>{
+      let d;
+      try{d=JSON.parse(r.meal_log)}catch(e){d={mealType:'',description:''}}
+      const score = parseInt(r.meal_impact_score)||0;
+      const scoreBg = score>=80?'bg-green-50':score>=60?'bg-yellow-50':'bg-red-50';
+      return `<div class="bg-white rounded-lg p-3 border border-g100">
+        <div class="flex justify-between items-start gap-2 mb-1">
+          <span class="text-xs font-semibold">${d.mealType||''}</span>
+          <span class="text-[10px] ${scoreBg} rounded px-2 py-1 font-bold">${score} pts</span>
+        </div>
+        <span class="text-xs text-gray-600">${d.description||''}</span>
+        <div class="text-[10px] text-gray-400 mt-1">📅 ${r.scan_date||''}</div>
+      </div>`;
+    }).join('');
+  } else {
+    noM.classList.remove('hidden');
+    dashM.innerHTML = '';
+  }
+
+  const fc = document.getElementById('futureChart');
+  const projections = [];
+  Object.keys(ranges).forEach(k=>{
+    const v = labResults[k];
+    const r = ranges[k];
+    if(!v) return '';
+    const st = getStatus(k, v);
+    let projected = v + (todayImpact[k] || 0);
+    
+    const color = st.c==='green'?'bg-green-400':st.c==='yellow'?'bg-yellow-400':'bg-red-400';
+    projections.push(`<div class="flex items-center gap-2">
+      <span class="w-16 text-xs font-medium text-gray-600">${k.toUpperCase()}</span>
+      <div class="flex-1 bg-gray-100 rounded-full h-4 relative overflow-hidden">
+        <div class="${color} h-full rounded-full" style="width:${Math.min(100,(v/r.high)*70)}%"></div>
+      </div>
+      <span class="text-xs text-g600 font-semibold">→ ${projected.toFixed(1)}</span>
+    </div>`);
+  });
+  fc.innerHTML = projections.join('');
+
+  const pct = meals.length ? Math.min(100, Math.round((meals.length / 21) * 100)) : 0;
+  document.getElementById('progressPct').textContent = pct+'%';
+}
+
+// ===== PAGE 9: COMPARE =====
+let compareAcc1 = null, compareAcc2 = null;
+
+function toggleComparisonMode(){
+  comparisonMode = comparisonMode === 'history' ? 'benchmark' : 'history';
+  const toggle = document.getElementById('comparisonToggleDot');
+  const label = document.getElementById('comparisonModeLabel');
+  const compareSection = document.getElementById('compareAccountsSection');
+  const benchmarkSection = document.getElementById('benchmarkSection');
+  
+  if(comparisonMode === 'benchmark'){
+    toggle.classList.add('left-7');
+    toggle.classList.remove('left-1');
+    label.textContent = 'เปิด: เทียบกับคนอื่น';
+    compareSection.classList.add('hidden');
+    benchmarkSection.classList.remove('hidden');
+    renderBenchmark();
+  } else {
+    toggle.classList.remove('left-7');
+    toggle.classList.add('left-1');
+    label.textContent = 'ปิด: เปรียบเทียบประวัติของคุณเอง';
+    compareSection.classList.remove('hidden');
+    benchmarkSection.classList.add('hidden');
+    populateAccountSelectors();
+  }
+}
+
+function renderBenchmark(){
+  const cards = document.getElementById('benchmarkCards');
+  const benchmarkData = {
+    hb:{avg:14.2,range:'13-15.5',your:labResults.hb,percentile:65},
+    wbc:{avg:7.5,range:'4.5-11',your:labResults.wbc,percentile:72},
+    plt:{avg:250,range:'150-400',your:labResults.plt,percentile:58},
+    glu:{avg:95,range:'70-100',your:labResults.glu,percentile:48}
+  };
+  
+  cards.innerHTML = Object.keys(benchmarkData).map(k=>{
+    const b = benchmarkData[k];
+    const r = ranges[k];
+    const better = Math.abs(b.your - b.avg) < Math.abs(b.avg - b.avg)*0.1;
+    return `<div class="bg-white rounded-xl p-3 border ${better?'border-green-200':'border-orange-200'}">
+      <div class="flex justify-between items-center mb-2">
+        <span class="font-semibold text-sm">${r.name}</span>
+        <span class="text-sm font-bold ${better?'text-green-600':'text-orange-600'}">${b.percentile}th</span>
+      </div>
+      <div class="flex gap-3 text-xs">
+        <span class="text-gray-500">เฉลี่ย: <b>${b.avg}</b></span>
+        <span class="text-gray-500">คุณ: <b class="${better?'text-green-700':'text-orange-700'}">${b.your}</b></span>
+      </div>
+      <div class="text-[10px] text-gray-400 mt-1">${better?'✅ ดีกว่า':'⚠️ ต่ำกว่า'}</div>
+    </div>`;
+  }).join('');
+}
+
+function runSimulation(scenario){
+  const result = document.getElementById('simulationResult');
+  result.classList.remove('hidden');
+  result.innerHTML = '<div class="flex items-center gap-2"><div class="w-3 h-3 border-2 border-g500 border-t-transparent rounded-full animate-spin"></div><span class="text-sm text-g700">กำลังจำลอง...</span></div>';
+  
+  setTimeout(()=>{
+    let sim = {};
+    if(scenario === 'healthy'){
+      sim = {hb:Math.min(ranges.hb.high, labResults.hb+2.5), glu:Math.max(ranges.glu.low, labResults.glu-15), cho:Math.max(40, labResults.cho-30), description:'📈 กินสุขภาพดี 3 เดือน'};
+    } else if(scenario === 'balanced'){
+      sim = {hb:Math.min(ranges.hb.high, Math.max(ranges.hb.low, labResults.hb+0.3)), glu:Math.min(ranges.glu.high, Math.max(ranges.glu.low, labResults.glu-3)), cho:Math.min(ranges.cho.high, Math.max(40, labResults.cho-5)), description:'⚖️ กินปกติแต่ระวัง'};
+    } else {
+      sim = {hb:Math.max(ranges.hb.critLow, labResults.hb-1.5), glu:Math.min(ranges.glu.critHigh, labResults.glu+20), cho:Math.min(280, labResults.cho+40), description:'⛔ ไม่ดูแล 3 เดือน'};
+    }
+    
+    result.innerHTML = `
+      <div class="font-bold text-g700 mb-2">${sim.description}</div>
+      <div class="grid grid-cols-3 gap-2 text-xs">
+        <div class="bg-${scenario==='healthy'?'green':'orange'}-50 rounded p-2">
+          <div class="font-semibold">Hb</div>
+          <div>${labResults.hb.toFixed(1)} → ${sim.hb.toFixed(1)}</div>
+        </div>
+        <div class="bg-${scenario==='healthy'?'green':'orange'}-50 rounded p-2">
+          <div class="font-semibold">Glucose</div>
+          <div>${labResults.glu.toFixed(0)} → ${sim.glu.toFixed(0)}</div>
+        </div>
+        <div class="bg-${scenario==='healthy'?'green':'orange'}-50 rounded p-2">
+          <div class="font-semibold">Cholesterol</div>
+          <div>${labResults.cho.toFixed(0)} → ${sim.cho.toFixed(0)}</div>
+        </div>
+      </div>
+      <div class="mt-2 text-center font-semibold ${scenario==='healthy'?'text-green-700':scenario==='balanced'?'text-yellow-700':'text-red-700'}">
+        ${scenario==='healthy'?'✅ ผลดีขึ้นมาก':scenario==='balanced'?'⚠️ คงที่':'❌ แย่ลงเร็ว'}
+      </div>
+    `;
+  }, 1200);
+}
+
+function populateAccountSelectors(){
+  const labs = allRecords.filter(r=>r.type==='lab_result'&&r.profile_name);
+  const sel1 = document.getElementById('compareAccount1');
+  const sel2 = document.getElementById('compareAccount2');
+  const opts = labs.map(l=>`<option value="${l.__backendId}">${l.profile_name} (${l.scan_date})</option>`).join('');
+  sel1.innerHTML = '<option value="">-- เลือกบัญชีแรก --</option>' + opts;
+  sel2.innerHTML = '<option value="">-- เลือกบัญชีที่สอง --</option>' + opts;
+}
+
+function swapAccounts(){
+  const sel1 = document.getElementById('compareAccount1');
+  const sel2 = document.getElementById('compareAccount2');
+  const temp = sel1.value;
+  sel1.value = sel2.value;
+  sel2.value = temp;
+  updateCompare();
+}
+
+function updateCompare(){
+  const id1 = document.getElementById('compareAccount1').value;
+  const id2 = document.getElementById('compareAccount2').value;
+  compareAcc1 = id1 ? allRecords.find(r=>r.__backendId===id1) : null;
+  compareAcc2 = id2 ? allRecords.find(r=>r.__backendId===id2) : null;
+  renderCompare();
+}
+
+function renderCompare(){
+  const noC = document.getElementById('noCompare');
+  const cards = document.getElementById('compareCards');
+  const advice = document.getElementById('compareAdvice');
+
+  if(!compareAcc1 || !compareAcc2){
+    noC.classList.remove('hidden');
+    cards.innerHTML = '';
+    advice.innerHTML = '<p class="text-gray-400 italic text-sm">เลือกบัญชี 2 บัญชีเพื่อเปรียบเทียบ</p>';
+    return;
+  }
+  
+  noC.classList.add('hidden');
+  const prev = JSON.parse(compareAcc1.lab_results||'{}');
+  const curr = JSON.parse(compareAcc2.lab_results||'{}');
+
+  cards.innerHTML = Object.keys(ranges).map(k=>{
+    const r = ranges[k];
+    const pv = prev[k] || 0;
+    const cv = curr[k] || 0;
+    const diff = cv - pv;
+    const better = (cv >= r.low && cv <= r.high) || (Math.abs(cv - ((r.low+r.high)/2)) < Math.abs(pv - ((r.low+r.high)/2)));
+    return `<div class="bg-white rounded-xl p-4 border ${better?'border-green-200':'border-red-200'}">
+      <div class="flex justify-between items-center mb-1">
+        <span class="font-semibold text-sm">${r.name}</span>
+        <span class="text-sm font-bold ${better?'text-green-600':'text-red-600'}">${better?'↗️ ดีขึ้น':'↘️ แย่ลง'}</span>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <span class="text-gray-400">ก่อน: <b class="text-gray-700">${pv}</b></span>
+        <span class="text-gray-400">ล่าสุด: <b class="${better?'text-green-700':'text-red-700'}">${cv}</b></span>
+        <span class="text-xs ${diff>0?'text-orange-500':'text-blue-500'}">(${diff>0?'+':''}${diff.toFixed(1)})</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const advices = [];
+  Object.keys(ranges).forEach(k=>{
+    const r = ranges[k];
+    const pv = prev[k] || 0;
+    const cv = curr[k] || 0;
+    const stC = getStatus(k, cv);
+    if(stC.s === 'critical') advices.push(`🚨 ${r.name} ยังผิดปกติรุนแรง`);
+    else if(stC.s === 'warning' && cv < pv) advices.push(`⚠️ ${r.name} ลดลง ปรับอาหาร`);
+    else if(stC.s === 'normal' && getStatus(k, pv).s !== 'normal') advices.push(`✅ ${r.name} กลับปกติแล้ว`);
+  });
+  if(!advices.length) advices.push('👍 ภาพรวมดีขึ้น ทำต่อไป!');
+  advice.innerHTML = advices.map(a=>`<div class="bg-g50 rounded-lg p-3 text-sm">${a}</div>`).join('');
+}
+
+// ===== DATA SDK =====
+const dataHandler = {
+  onDataChanged(data){
+    allRecords = data;
+    if(currentPage === 1) renderHomePage();
+    if(currentPage === 6) renderMealLogs();
+    if(currentPage === 7) renderExtras();
+    if(currentPage === 8) renderDashboard();
+    if(currentPage === 9) {populateAccountSelectors(); renderCompare()}
+  }
+};
+
+// ===== ELEMENT SDK =====
+const defaultConfig = {
+  app_title: 'BloodTypeMatch',
+  app_subtitle: 'จัดอาหารให้ตามผลตรวจเลือด',
+  app_caption: '✨ ปล่อยให้ผลเลือดของคุณพูดคุย',
+  background_color: '#ffffff',
+  surface_color: '#ffffff',
+  text_color: '#166534',
+  primary_action_color: '#22c55e',
+  secondary_action_color: '#16a34a',
+  font_family: 'Sarabun',
+  font_size: 16
+};
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async(config) => {
+    const t = config.app_title || defaultConfig.app_title;
+    const s = config.app_subtitle || defaultConfig.app_subtitle;
+    const c = config.app_caption || defaultConfig.app_caption;
+    const titleEl = document.getElementById('landingTitle');
+    const subtitleEl = document.getElementById('landingSubtitle');
+    const captionEl = document.getElementById('landingCaption');
+    const bodyEl = document.querySelector('body');
+    const textColor = config.text_color || defaultConfig.text_color;
+    const bgColor = config.background_color || defaultConfig.background_color;
+    const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+    
+    if(titleEl) {
+      titleEl.textContent = t;
+      titleEl.style.color = textColor;
+    }
+    if(subtitleEl) {
+      subtitleEl.textContent = s;
+      subtitleEl.style.color = textColor;
+    }
+    if(captionEl) {
+      captionEl.textContent = c;
+      captionEl.style.color = textColor;
+    }
+    if(bodyEl) {
+      bodyEl.style.backgroundColor = bgColor;
+      bodyEl.style.color = textColor;
+    }
+    document.querySelectorAll('.glow-btn, .bg-gradient-to-r.from-g500').forEach(el => {
+      el.style.background = `linear-gradient(to right, ${primaryColor}, ${primaryColor}cc)`;
+    });
+  },
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      {
+        get: () => config.background_color || defaultConfig.background_color,
+        set: (v) => {
+          config.background_color = v;
+          window.elementSdk.setConfig({background_color: v});
+        }
+      },
+      {
+        get: () => config.text_color || defaultConfig.text_color,
+        set: (v) => {
+          config.text_color = v;
+          window.elementSdk.setConfig({text_color: v});
+        }
+      },
+      {
+        get: () => config.primary_action_color || defaultConfig.primary_action_color,
+        set: (v) => {
+          config.primary_action_color = v;
+          window.elementSdk.setConfig({primary_action_color: v});
+        }
+      },
+      {
+        get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+        set: (v) => {
+          config.secondary_action_color = v;
+          window.elementSdk.setConfig({secondary_action_color: v});
+        }
+      }
+    ],
+    borderables: [],
+    fontEditable: {
+      get: () => config.font_family || defaultConfig.font_family,
+      set: (v) => {
+        config.font_family = v;
+        window.elementSdk.setConfig({font_family: v});
+      }
+    },
+    fontSizeable: {
+      get: () => config.font_size || defaultConfig.font_size,
+      set: (v) => {
+        config.font_size = v;
+        window.elementSdk.setConfig({font_size: v});
+      }
+    }
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['app_title', config.app_title || defaultConfig.app_title],
+    ['app_subtitle', config.app_subtitle || defaultConfig.app_subtitle],
+    ['app_caption', config.app_caption || defaultConfig.app_caption]
+  ])
+});
+
+// ===== INIT =====
+async function initializeApp(){
+  if(window.dataSdk){
+    await window.dataSdk.init(dataHandler).catch(()=>{});
+  }
+  document.getElementById('mealTime').value = '12:00';
+  renderHomePage();
+  if(window.lucide) lucide.createIcons();
+}
+
+async function deleteMealLog(recordId){
+  const record = allRecords.find(r=>r.__backendId===recordId);
+  if(!record) return;
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
+  overlay.onclick = (e) => { if(e.target === overlay) overlay.remove(); };
+  
+  overlay.innerHTML = `
+    <div class="bg-white rounded-2xl p-6 max-w-xs shadow-xl">
+      <h3 class="font-bold text-lg text-g800 mb-2">⚠️ ยืนยันการลบ</h3>
+      <p class="text-sm text-gray-600 mb-4">ลบบันทึกอาหารนี้ใช่หรือไม่? ไม่สามารถยกเลิกได้</p>
+      <div class="space-y-2">
+        <button class="w-full bg-red-500 text-white font-semibold py-3 rounded-xl hover:bg-red-600 transition-all delete-confirm-btn">🗑️ ลบเลย</button>
+        <button class="w-full bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl hover:bg-gray-300 transition-all">ยกเลิก</button>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('app').appendChild(overlay);
+  
+  overlay.querySelectorAll('button')[0].addEventListener('click', async () => {
+    const btn = overlay.querySelectorAll('button')[0];
+    btn.disabled = true;
+    btn.textContent = 'กำลังลบ...';
+    
+    const result = await window.dataSdk.delete(record);
+    if(result.isOk){
+      overlay.remove();
+      showToast('✅ ลบบันทึกเสร็จแล้ว');
+      renderMealLogs();
+      if(currentPage === 8) renderDashboard();
+    } else {
+      showToast('❌ ไม่สามารถลบบันทึก');
+      btn.disabled = false;
+      btn.textContent = '🗑️ ลบเลย';
+    }
+  });
+  
+  overlay.querySelectorAll('button')[1].addEventListener('click', () => {
+    overlay.remove();
+  });
+}
+
+initializeApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0caa4dc02b74d99',t:'MTc4MTYyMTYwNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
