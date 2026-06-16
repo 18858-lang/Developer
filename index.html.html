@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head><script src="/_sdk/telemetry_sdk.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classroom Thermal Sandbox</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Sarabun:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+html, body { height: 100%; margin: 0; }
+* { font-family: 'Sarabun', sans-serif; }
+.mono { font-family: 'JetBrains Mono', monospace; }
+.heatmap-cell { transition: background-color 0.3s ease; cursor: pointer; position: relative; }
+.heatmap-cell:hover { outline: 2px solid #fff; z-index: 10; }
+.tooltip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 11px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 100; }
+.heatmap-cell:hover .tooltip { opacity: 1; }
+.ac-icon { position: absolute; z-index: 20; pointer-events: none; }
+.glow-blue { box-shadow: 0 0 20px rgba(0, 200, 255, 0.3); }
+.glow-red { box-shadow: 0 0 20px rgba(255, 50, 50, 0.3); }
+.panel { background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 12px; }
+.slider-custom { -webkit-appearance: none; background: linear-gradient(90deg, #00d4ff, #ff4444); border-radius: 8px; height: 6px; }
+.slider-custom::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; cursor: pointer; }
+.fade-in { animation: fadeIn 0.5s ease forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+.pulse { animation: pulse 2s infinite; }
+.tab-active { background: linear-gradient(135deg, #00d4ff22, #7c3aed22); border-color: #00d4ff; color: #00d4ff; }
+.obj-draggable { cursor: grab; user-select: none; }
+.obj-draggable:active { cursor: grabbing; }
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-[#080810] text-gray-200 overflow-auto">
+  <div id="app" class="w-full h-full flex flex-col"><!-- Header -->
+   <header class="w-full px-6 py-4 flex items-center justify-between border-b border-[#1e1e3a] bg-[#0a0a14]">
+    <div class="flex items-center gap-3">
+     <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center"><i data-lucide="thermometer" class="w-5 h-5 text-white"></i>
+     </div>
+     <div>
+      <h1 id="main-title" class="text-lg font-bold text-white">Classroom Thermal Sandbox</h1>
+      <p id="main-subtitle" class="text-xs text-gray-400 mono">Thermal Comfort Analysis System — ISO 7730 / ASHRAE 55</p>
+     </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-gray-500 mono"><span class="w-2 h-2 rounded-full bg-green-400 pulse"></span> <span>ENGINE READY</span>
+    </div>
+   </header><!-- Tabs -->
+   <nav class="w-full px-6 pt-4 flex gap-2"><button onclick="switchTab('input')" id="tab-input" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all tab-active"> <i data-lucide="ruler" class="w-4 h-4 inline mr-1"></i>ตั้งค่าห้อง </button> <button onclick="switchTab('heatmap')" id="tab-heatmap" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all text-gray-400"> <i data-lucide="flame" class="w-4 h-4 inline mr-1"></i>แผนผังความร้อน </button> <button onclick="switchTab('recommend')" id="tab-recommend" class="tab-btn px-4 py-2 rounded-lg border border-[#2a2a4a] text-sm font-semibold transition-all text-gray-400"> <i data-lucide="lightbulb" class="w-4 h-4 inline mr-1"></i>คำแนะนำ </button>
+   </nav><!-- Tab: Input -->
+   <section id="section-input" class="flex-1 w-full p-6 overflow-auto">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto"><!-- Room Config -->
+     <div class="panel p-6 fade-in">
+      <h2 class="text-base font-bold text-cyan-400 mb-4 flex items-center gap-2"><i data-lucide="box" class="w-5 h-5"></i>กำหนดขนาดห้องเรียน</h2>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+       <div><label for="room-width" class="text-xs text-gray-400 block mb-1">ความกว้าง (เมตร)</label> <input id="room-width" type="number" value="10" min="3" max="50" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+       <div><label for="room-length" class="text-xs text-gray-400 block mb-1">ความยาว (เมตร)</label> <input id="room-length" type="number" value="12" min="3" max="50" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+       <div><label for="grid-scale" class="text-xs text-gray-400 block mb-1">สเกล Grid (เมตร/บล็อก)</label> <input id="grid-scale" type="number" value="1" min="0.5" max="5" step="0.5" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+       <div><label for="ac-count" class="text-xs text-gray-400 block mb-1">จำนวนแอร์ (ตัว)</label> <input id="ac-count" type="number" value="2" min="1" max="8" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+      </div>
+      <h3 class="text-xs text-gray-400 mb-2 mt-4">ตำแหน่งแอร์ (พิกัด X, Y จากมุมซ้ายบน)</h3>
+      <div id="ac-positions" class="space-y-2 mb-4"></div>
+      <h3 class="text-xs text-gray-400 mb-2 mt-4">ตำแหน่งหน้าต่าง</h3>
+      <div class="flex gap-2 flex-wrap mb-4"><label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-north" class="accent-cyan-500" checked> ด้านเหนือ (บน)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-south" class="accent-cyan-500"> ด้านใต้ (ล่าง)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-east" class="accent-cyan-500"> ด้านตะวันออก (ขวา)</label> <label class="flex items-center gap-1 text-xs"><input type="checkbox" id="win-west" class="accent-cyan-500"> ด้านตะวันตก (ซ้าย)</label>
+      </div>
+      <h3 class="text-xs text-gray-400 mb-2">พารามิเตอร์สิ่งแวดล้อม</h3>
+      <div class="grid grid-cols-2 gap-3 mb-4">
+       <div><label for="outdoor-temp" class="text-xs text-gray-500 block mb-1">อุณหภูมินอกอาคาร (°C)</label> <input id="outdoor-temp" type="number" value="36" min="20" max="50" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+       <div><label for="ac-temp" class="text-xs text-gray-500 block mb-1">อุณหภูมิตั้งแอร์ (°C)</label> <input id="ac-temp" type="number" value="25" min="16" max="30" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+       <div><label for="humidity" class="text-xs text-gray-500 block mb-1">ความชื้นสัมพัทธ์ (%)</label> <input id="humidity" type="number" value="60" min="20" max="95" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+       <div><label for="student-count" class="text-xs text-gray-500 block mb-1">จำนวนนักเรียน (คน)</label> <input id="student-count" type="number" value="35" min="0" max="100" class="w-full bg-[#1a1a2e] border border-[#2a2a4a] rounded-lg px-3 py-2 text-white mono text-sm focus:border-cyan-500 focus:outline-none">
+       </div>
+      </div><button onclick="generateHeatmap()" class="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold text-sm hover:from-cyan-500 hover:to-purple-500 transition-all flex items-center justify-center gap-2"> <i data-lucide="zap" class="w-4 h-4"></i>คำนวณแผนผังความร้อน </button>
+     </div><!-- Image Upload -->
+     <div class="panel p-6 fade-in" style="animation-delay:0.1s">
+      <h2 class="text-base font-bold text-purple-400 mb-4 flex items-center gap-2"><i data-lucide="camera" class="w-5 h-5"></i>อัปโหลดภาพถ่ายห้องเรียน (ไม่บังคับ)</h2>
+      <p class="text-xs text-gray-500 mb-3">ระบบจะนำภาพไปซ้อนทับกับ Grid เพื่อเปรียบเทียบตำแหน่งจริง</p>
+      <div id="upload-zone" class="border-2 border-dashed border-[#2a2a4a] rounded-xl p-8 text-center hover:border-purple-500 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()"><i data-lucide="upload-cloud" class="w-12 h-12 text-gray-600 mx-auto mb-3"></i>
+       <p class="text-sm text-gray-400">คลิกหรือลากไฟล์ภาพมาวางที่นี่</p>
+       <p class="text-xs text-gray-600 mt-1">รองรับ JPG, PNG</p>
+      </div><input id="file-input" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+      <div id="image-preview" class="mt-4 hidden"><img id="preview-img" class="w-full rounded-lg border border-[#2a2a4a] max-h-48 object-cover" alt="ภาพห้องเรียน">
+       <p class="text-xs text-green-400 mt-2 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i>อัปโหลดสำเร็จ — ภาพจะซ้อนทับบน Heatmap</p>
+      </div><!-- Formula Reference -->
+      <div class="mt-6 p-4 bg-[#0a0a14] rounded-lg border border-[#1a1a2e]">
+       <h3 class="text-xs font-bold text-cyan-400 mb-2 mono">📐 สูตรที่ใช้ในระบบ</h3>
+       <div class="space-y-2 text-xs text-gray-400 mono leading-relaxed">
+        <p><span class="text-yellow-400">IDW:</span> Z(s₀) = Σ(λᵢ·Zᵢ) / Σ(λᵢ)</p>
+        <p><span class="text-yellow-400">Weight:</span> λᵢ = 1 / dᵢ₀²</p>
+        <p><span class="text-yellow-400">PMV:</span> [0.303·e^(-0.036M)+0.028]·L</p>
+        <p><span class="text-yellow-400">L:</span> M - W - H_res - E_sk - R - C</p>
+        <p class="text-gray-600 mt-2">อ้างอิง: ISO 7730:2005, ASHRAE 55-2020</p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </section><!-- Tab: Heatmap -->
+   <section id="section-heatmap" class="flex-1 w-full p-6 overflow-auto hidden">
+    <div class="max-w-7xl mx-auto">
+     <div class="grid grid-cols-1 xl:grid-cols-4 gap-6"><!-- Heatmap Grid -->
+      <div class="xl:col-span-3 panel p-6">
+       <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-bold text-white flex items-center gap-2"><i data-lucide="grid" class="w-5 h-5 text-cyan-400"></i>แผนผังความร้อน (Dynamic Heatmap)</h2>
+        <div class="flex items-center gap-3"><label class="text-xs text-gray-400 flex items-center gap-1"> <input type="checkbox" id="show-image-overlay" class="accent-purple-500" onchange="toggleImageOverlay()"> แสดงภาพซ้อน </label> <span id="grid-info" class="text-xs mono text-gray-500"></span>
+        </div>
+       </div><!-- Legend -->
+       <div class="flex items-center gap-4 mb-4 text-xs"><span class="text-gray-400">PMV Scale:</span>
+        <div class="flex items-center gap-1">
+         <div class="w-4 h-4 rounded" style="background:#00d4ff"></div><span class="text-gray-500">เย็น (-3)</span>
+        </div>
+        <div class="flex items-center gap-1">
+         <div class="w-4 h-4 rounded" style="background:#00ff88"></div><span class="text-gray-500">สบาย (0)</span>
+        </div>
+        <div class="flex items-center gap-1">
+         <div class="w-4 h-4 rounded" style="background:#ffaa00"></div><span class="text-gray-500">อุ่น (+2)</span>
+        </div>
+        <div class="flex items-center gap-1">
+         <div class="w-4 h-4 rounded" style="background:#ff2222"></div><span class="text-gray-500">ร้อน (+3)</span>
+        </div>
+        <div class="flex items-center gap-2 ml-4"><span class="text-cyan-400">❄</span><span class="text-gray-500">= แอร์</span> <span class="text-yellow-400">☀</span><span class="text-gray-500">= หน้าต่าง</span>
+        </div>
+       </div><!-- Grid Container -->
+       <div id="heatmap-container" class="relative w-full overflow-auto rounded-lg border border-[#1a1a2e]" style="min-height: 300px;">
+        <div id="heatmap-grid" class="relative"></div><img id="overlay-img" class="absolute top-0 left-0 w-full h-full object-cover opacity-20 pointer-events-none hidden rounded-lg" alt="">
+       </div><!-- Simulation Controls -->
+       <div class="mt-4 p-4 bg-[#0a0a14] rounded-lg border border-[#1a1a2e]">
+        <h3 class="text-xs font-bold text-purple-400 mb-3 flex items-center gap-2"><i data-lucide="sliders" class="w-4 h-4"></i>What-If Simulation Sandbox</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+         <div><label class="text-xs text-gray-400 block mb-1">อุณหภูมิตั้งแอร์: <span id="sim-ac-val" class="text-cyan-400 mono">25°C</span></label> <input type="range" id="sim-ac-temp" min="16" max="30" value="25" class="w-full slider-custom" oninput="simUpdate()">
+         </div>
+         <div><label class="text-xs text-gray-400 block mb-1">อุณหภูมิภายนอก: <span id="sim-out-val" class="text-orange-400 mono">36°C</span></label> <input type="range" id="sim-out-temp" min="25" max="48" value="36" class="w-full slider-custom" oninput="simUpdate()">
+         </div>
+         <div><label class="text-xs text-gray-400 block mb-1">ความชื้น: <span id="sim-hum-val" class="text-blue-400 mono">60%</span></label> <input type="range" id="sim-humidity" min="20" max="95" value="60" class="w-full slider-custom" oninput="simUpdate()">
+         </div>
+        </div><button onclick="recomputeFromSim()" class="mt-3 px-4 py-2 rounded-lg bg-purple-700 hover:bg-purple-600 text-white text-xs font-semibold transition-colors"> <i data-lucide="refresh-cw" class="w-3 h-3 inline mr-1"></i>คำนวณใหม่ </button>
+       </div>
+      </div><!-- Stats Panel -->
+      <div class="xl:col-span-1 space-y-4">
+       <div class="panel p-4">
+        <h3 class="text-xs font-bold text-gray-400 mb-3">📊 สถิติห้อง</h3>
+        <div class="space-y-3">
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิเฉลี่ย</span> <span id="stat-avg-temp" class="mono text-sm text-white font-bold">--°C</span>
+         </div>
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิสูงสุด</span> <span id="stat-max-temp" class="mono text-sm text-red-400 font-bold">--°C</span>
+         </div>
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">อุณหภูมิต่ำสุด</span> <span id="stat-min-temp" class="mono text-sm text-cyan-400 font-bold">--°C</span>
+         </div>
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">PMV เฉลี่ย</span> <span id="stat-avg-pmv" class="mono text-sm text-yellow-400 font-bold">--</span>
+         </div>
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">โซนร้อน (PMV&gt;+2)</span> <span id="stat-hot-zones" class="mono text-sm text-red-400 font-bold">--%</span>
+         </div>
+         <div class="flex justify-between items-center"><span class="text-xs text-gray-500">โซนสบาย (|PMV|≤1)</span> <span id="stat-comfort-zones" class="mono text-sm text-green-400 font-bold">--%</span>
+         </div>
+        </div>
+       </div>
+       <div class="panel p-4">
+        <h3 class="text-xs font-bold text-gray-400 mb-3">🌬️ ประสิทธิภาพแอร์</h3>
+        <div id="ac-efficiency" class="space-y-2 text-xs"></div>
+       </div>
+       <div class="panel p-4">
+        <h3 class="text-xs font-bold text-gray-400 mb-2">📏 ขนาดห้อง</h3>
+        <div id="room-summary" class="text-xs text-gray-500 mono space-y-1"></div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </section><!-- Tab: Recommendations -->
+   <section id="section-recommend" class="flex-1 w-full p-6 overflow-auto hidden">
+    <div class="max-w-4xl mx-auto space-y-4">
+     <div class="panel p-6">
+      <h2 class="text-base font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="lightbulb" class="w-5 h-5 text-yellow-400"></i>คำแนะนำการแก้ไขปัญหา (AI Recommendations)</h2>
+      <p class="text-xs text-gray-500 mb-4">ระบบวิเคราะห์จุดวิกฤตและสรุปแนวทางแก้ไขตามหลักฟิสิกส์ความร้อน ISO 7730</p>
+      <div id="recommendations-list" class="space-y-4">
+       <p class="text-sm text-gray-500 italic">กรุณาคำนวณแผนผังความร้อนก่อนเพื่อดูคำแนะนำ</p>
+      </div>
+     </div>
+    </div>
+   </section>
+  </div>
+  <script>
+// State
+let gridData = [];
+let roomW = 10, roomL = 12, gridScale = 1;
+let acPositions = [];
+let uploadedImageSrc = null;
+let windows = { north: true, south: false, east: false, west: false };
+
+const defaultConfig = {
+  app_title: 'Classroom Thermal Sandbox',
+  subtitle: 'Thermal Comfort Analysis System',
+  background_color: '#080810',
+  surface_color: '#0f0f1a',
+  text_color: '#e5e7eb',
+  primary_color: '#00d4ff',
+  secondary_color: '#7c3aed',
+  font_family: 'Sarabun',
+  font_size: 16
+};
+
+function applyConfig(config) {
+  const t = config.app_title || defaultConfig.app_title;
+  const s = config.subtitle || defaultConfig.subtitle;
+  document.getElementById('main-title').textContent = t;
+  document.getElementById('main-subtitle').textContent = s;
+  document.body.style.backgroundColor = config.background_color || defaultConfig.background_color;
+  const font = config.font_family || defaultConfig.font_family;
+  document.body.style.fontFamily = `${font}, Sarabun, sans-serif`;
+}
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => applyConfig(config),
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+      { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+      { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+      { get: () => config.primary_color || defaultConfig.primary_color, set: (v) => { config.primary_color = v; window.elementSdk.setConfig({ primary_color: v }); } },
+      { get: () => config.secondary_color || defaultConfig.secondary_color, set: (v) => { config.secondary_color = v; window.elementSdk.setConfig({ secondary_color: v }); } }
+    ],
+    borderables: [],
+    fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+    fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } }
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['app_title', config.app_title || defaultConfig.app_title],
+    ['subtitle', config.subtitle || defaultConfig.subtitle]
+  ])
+});
+
+// Tab switching
+function switchTab(tab) {
+  ['input','heatmap','recommend'].forEach(t => {
+    document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
+    document.getElementById('tab-' + t).classList.toggle('tab-active', t === tab);
+    if (t !== tab) document.getElementById('tab-' + t).classList.add('text-gray-400');
+    else document.getElementById('tab-' + t).classList.remove('text-gray-400');
+  });
+}
+
+// AC positions UI
+function updateACInputs() {
+  const count = parseInt(document.getElementById('ac-count').value) || 2;
+  const container = document.getElementById('ac-positions');
+  container.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const defX = i === 0 ? 2 : roomW - 2;
+    const defY = Math.floor(roomL / 2);
+    container.innerHTML += `
+      <div class="flex gap-2 items-center">
+        <span class="text-xs text-cyan-400 w-16">แอร์ ${i+1}:</span>
+        <input type="number" class="ac-x w-20 bg-[#1a1a2e] border border-[#2a2a4a] rounded px-2 py-1 text-white mono text-xs" value="${defX}" min="0" max="${roomW}" step="0.5" placeholder="X">
+        <input type="number" class="ac-y w-20 bg-[#1a1a2e] border border-[#2a2a4a] rounded px-2 py-1 text-white mono text-xs" value="${defY}" min="0" max="${roomL}" step="0.5" placeholder="Y">
+        <span class="text-xs text-gray-600">(เมตร)</span>
+      </div>`;
+  }
+}
+
+document.getElementById('ac-count').addEventListener('change', updateACInputs);
+updateACInputs();
+
+// Image upload
+function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    uploadedImageSrc = ev.target.result;
+    document.getElementById('preview-img').src = uploadedImageSrc;
+    document.getElementById('image-preview').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function toggleImageOverlay() {
+  const show = document.getElementById('show-image-overlay').checked;
+  const overlay = document.getElementById('overlay-img');
+  if (uploadedImageSrc && show) {
+    overlay.src = uploadedImageSrc;
+    overlay.classList.remove('hidden');
+  } else {
+    overlay.classList.add('hidden');
+  }
+}
+
+// Core Thermal Engine
+function computeIDW(px, py, sources) {
+  let sumWeightedVal = 0, sumWeights = 0;
+  for (const src of sources) {
+    const dx = px - src.x;
+    const dy = py - src.y;
+    const dist2 = dx * dx + dy * dy;
+    if (dist2 < 0.01) return src.temp;
+    const w = 1 / dist2;
+    sumWeightedVal += w * src.temp;
+    sumWeights += w;
+  }
+  return sumWeights > 0 ? sumWeightedVal / sumWeights : 30;
+}
+
+function computePMV(ta, tr, vel, rh, met, clo) {
+  // Simplified PMV calculation based on ISO 7730
+  const M = met * 58.15;
+  const W = 0;
+  const Icl = clo * 0.155;
+  const MW = M - W;
+  const fcl = Icl <= 0.078 ? 1 + 1.29 * Icl : 1.05 + 0.645 * Icl;
+  
+  // Iterative tcl calculation (simplified)
+  let tcl = ta + (35.7 - 0.028 * MW) / (3.96e-8 * fcl * (Math.pow(tr + 273, 4) - Math.pow(ta + 273, 4)) + fcl * 12.1 * Math.sqrt(vel) + 1 / Icl || 1) * 0.1;
+  tcl = Math.min(Math.max(tcl, ta - 5), ta + 15);
+  
+  const hc = Math.max(2.38 * Math.pow(Math.abs(tcl - ta), 0.25), 12.1 * Math.sqrt(vel));
+  
+  const R = 3.96e-8 * fcl * (Math.pow(tcl + 273, 4) - Math.pow(tr + 273, 4));
+  const C = fcl * hc * (tcl - ta);
+  const Eres = 1.7 * 0.00001 * M * (5867 - rh / 100 * 6.105 * Math.exp(17.27 * ta / (ta + 237.3)) * 1000 / 133.322);
+  const Cres = 0.0014 * M * (34 - ta);
+  const Esk = 3.05 * 0.001 * (5733 - 6.99 * MW - rh / 100 * 6.105 * Math.exp(17.27 * ta / (ta + 237.3)) * 1000 / 133.322);
+  
+  const L = MW - Eres - Cres - Esk - R - C;
+  const PMV = (0.303 * Math.exp(-0.036 * M) + 0.028) * L;
+  
+  return Math.max(-3, Math.min(3, PMV));
+}
+
+function pmvToColor(pmv) {
+  // Map PMV (-3 to +3) to color
+  if (pmv <= -2) return `rgba(0, 150, 255, 0.8)`;
+  if (pmv <= -1) return `rgba(0, 212, 255, 0.7)`;
+  if (pmv <= 0) return `rgba(0, 255, 136, 0.6)`;
+  if (pmv <= 1) return `rgba(180, 255, 0, 0.6)`;
+  if (pmv <= 2) return `rgba(255, 170, 0, 0.7)`;
+  return `rgba(255, 34, 34, 0.8)`;
+}
+
+function generateHeatmap() {
+  roomW = parseFloat(document.getElementById('room-width').value) || 10;
+  roomL = parseFloat(document.getElementById('room-length').value) || 12;
+  gridScale = parseFloat(document.getElementById('grid-scale').value) || 1;
+  const acCount = parseInt(document.getElementById('ac-count').value) || 2;
+  const outdoorTemp = parseFloat(document.getElementById('outdoor-temp').value) || 36;
+  const acTemp = parseFloat(document.getElementById('ac-temp').value) || 25;
+  const humidity = parseFloat(document.getElementById('humidity').value) || 60;
+  const studentCount = parseInt(document.getElementById('student-count').value) || 35;
+
+  windows = {
+    north: document.getElementById('win-north').checked,
+    south: document.getElementById('win-south').checked,
+    east: document.getElementById('win-east').checked,
+    west: document.getElementById('win-west').checked
+  };
+
+  // Get AC positions
+  acPositions = [];
+  const xInputs = document.querySelectorAll('.ac-x');
+  const yInputs = document.querySelectorAll('.ac-y');
+  for (let i = 0; i < acCount; i++) {
+    acPositions.push({
+      x: parseFloat(xInputs[i]?.value) || (i * roomW / (acCount + 1) + roomW / (acCount + 1)),
+      y: parseFloat(yInputs[i]?.value) || roomL / 2,
+      temp: acTemp
+    });
+  }
+
+  // Build thermal sources
+  const sources = [...acPositions];
+  
+  // Window heat sources
+  const cols = Math.ceil(roomW / gridScale);
+  const rows = Math.ceil(roomL / gridScale);
+  
+  if (windows.north) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: 0, temp: outdoorTemp - 2 }); }
+  if (windows.south) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: roomL, temp: outdoorTemp - 2 }); }
+  if (windows.east) { for (let r = 0; r < rows; r += 2) sources.push({ x: roomW, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
+  if (windows.west) { for (let r = 0; r < rows; r += 2) sources.push({ x: 0, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
+
+  // Body heat from students (distributed across center)
+  const bodyHeat = 0.5 + (studentCount / (cols * rows)) * 2;
+
+  // Compute grid
+  gridData = [];
+  let totalTemp = 0, maxTemp = -999, minTemp = 999, totalPMV = 0, hotCount = 0, comfortCount = 0;
+  const totalCells = rows * cols;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = c * gridScale + gridScale / 2;
+      const py = r * gridScale + gridScale / 2;
+      
+      let temp = computeIDW(px, py, sources);
+      temp += bodyHeat; // Add body heat
+      
+      // Airflow estimation
+      let airflow = 0.05;
+      for (const ac of acPositions) {
+        const dist = Math.sqrt((px - ac.x) ** 2 + (py - ac.y) ** 2);
+        airflow += Math.max(0, 1.5 - dist * 0.2);
+      }
+      airflow = Math.min(airflow, 2.0);
+      
+      const tr = temp + (isNearWindow(c, r, cols, rows) ? 3 : 0);
+      const pmv = computePMV(temp, tr, airflow, humidity, 1.1, 0.5);
+      
+      gridData.push({ r, c, px, py, temp, pmv, airflow });
+      
+      totalTemp += temp;
+      maxTemp = Math.max(maxTemp, temp);
+      minTemp = Math.min(minTemp, temp);
+      totalPMV += pmv;
+      if (pmv > 2) hotCount++;
+      if (Math.abs(pmv) <= 1) comfortCount++;
+    }
+  }
+
+  // Render
+  renderGrid(rows, cols);
+  updateStats(totalTemp / totalCells, maxTemp, minTemp, totalPMV / totalCells, hotCount / totalCells * 100, comfortCount / totalCells * 100);
+  generateRecommendations();
+  
+  // Update sim sliders
+  document.getElementById('sim-ac-temp').value = acTemp;
+  document.getElementById('sim-out-temp').value = outdoorTemp;
+  document.getElementById('sim-humidity').value = humidity;
+  simUpdate();
+
+  switchTab('heatmap');
+}
+
+function isNearWindow(c, r, cols, rows) {
+  if (windows.north && r === 0) return true;
+  if (windows.south && r === rows - 1) return true;
+  if (windows.east && c === cols - 1) return true;
+  if (windows.west && c === 0) return true;
+  return false;
+}
+
+function renderGrid(rows, cols) {
+  const container = document.getElementById('heatmap-grid');
+  const cellSize = Math.max(28, Math.min(50, 600 / Math.max(rows, cols)));
+  
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+  container.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+  container.style.width = `${cols * cellSize}px`;
+  container.style.margin = '0 auto';
+  container.innerHTML = '';
+
+  gridData.forEach((cell, i) => {
+    const div = document.createElement('div');
+    div.className = 'heatmap-cell';
+    div.style.width = cellSize + 'px';
+    div.style.height = cellSize + 'px';
+    div.style.backgroundColor = pmvToColor(cell.pmv);
+    div.style.border = '1px solid rgba(255,255,255,0.05)';
+    div.style.fontSize = '8px';
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.justifyContent = 'center';
+    div.style.color = 'rgba(255,255,255,0.6)';
+    div.style.fontFamily = 'JetBrains Mono, monospace';
+
+    if (cellSize > 35) div.textContent = cell.temp.toFixed(1) + '°';
+
+    // Check if AC is on this cell
+    for (const ac of acPositions) {
+      const acCol = Math.floor(ac.x / gridScale);
+      const acRow = Math.floor(ac.y / gridScale);
+      if (cell.c === acCol && cell.r === acRow) {
+        div.innerHTML = '<span style="font-size:16px">❄</span>';
+        div.style.border = '2px solid #00d4ff';
+      }
+    }
+
+    // Window indicator
+    if (isNearWindow(cell.c, cell.r, cols, rows)) {
+      div.style.borderColor = 'rgba(255,200,0,0.5)';
+    }
+
+    // Tooltip
+    const tip = document.createElement('span');
+    tip.className = 'tooltip';
+    tip.innerHTML = `[${cell.c},${cell.r}] T:${cell.temp.toFixed(1)}°C<br>PMV:${cell.pmv.toFixed(2)} | V:${cell.airflow.toFixed(2)}m/s`;
+    div.appendChild(tip);
+    
+    container.appendChild(div);
+  });
+
+  document.getElementById('grid-info').textContent = `${cols}×${rows} grid | ${gridScale}m/cell | ${roomW}×${roomL}m`;
+  
+  // Room summary
+  document.getElementById('room-summary').innerHTML = `
+    <p>พื้นที่: ${roomW}×${roomL} = ${(roomW*roomL).toFixed(1)} m²</p>
+    <p>Grid: ${cols}×${rows} = ${cols*rows} cells</p>
+    <p>สเกล: ${gridScale} m/cell</p>
+    <p>แอร์: ${acPositions.length} ตัว</p>
+  `;
+
+  // AC efficiency
+  const effContainer = document.getElementById('ac-efficiency');
+  effContainer.innerHTML = acPositions.map((ac, i) => {
+    const coverCells = gridData.filter(c => {
+      const d = Math.sqrt((c.px - ac.x)**2 + (c.py - ac.y)**2);
+      return d < 4 && c.pmv <= 1;
+    }).length;
+    const pct = (coverCells / gridData.length * 100).toFixed(0);
+    return `<div class="flex justify-between"><span class="text-gray-400">แอร์ ${i+1} (${ac.x},${ac.y})</span><span class="text-cyan-400 mono">${pct}% coverage</span></div>`;
+  }).join('');
+}
+
+function updateStats(avg, max, min, avgPMV, hotPct, comfortPct) {
+  document.getElementById('stat-avg-temp').textContent = avg.toFixed(1) + '°C';
+  document.getElementById('stat-max-temp').textContent = max.toFixed(1) + '°C';
+  document.getElementById('stat-min-temp').textContent = min.toFixed(1) + '°C';
+  document.getElementById('stat-avg-pmv').textContent = avgPMV.toFixed(2);
+  document.getElementById('stat-hot-zones').textContent = hotPct.toFixed(0) + '%';
+  document.getElementById('stat-comfort-zones').textContent = comfortPct.toFixed(0) + '%';
+}
+
+function simUpdate() {
+  document.getElementById('sim-ac-val').textContent = document.getElementById('sim-ac-temp').value + '°C';
+  document.getElementById('sim-out-val').textContent = document.getElementById('sim-out-temp').value + '°C';
+  document.getElementById('sim-hum-val').textContent = document.getElementById('sim-humidity').value + '%';
+}
+
+function recomputeFromSim() {
+  document.getElementById('ac-temp').value = document.getElementById('sim-ac-temp').value;
+  document.getElementById('outdoor-temp').value = document.getElementById('sim-out-temp').value;
+  document.getElementById('humidity').value = document.getElementById('sim-humidity').value;
+  
+  // Recompute heatmap with new simulation values
+  const outdoorTemp = parseFloat(document.getElementById('sim-out-temp').value) || 36;
+  const acTemp = parseFloat(document.getElementById('sim-ac-temp').value) || 25;
+  const humidity = parseFloat(document.getElementById('sim-humidity').value) || 60;
+  const studentCount = parseInt(document.getElementById('student-count').value) || 35;
+
+  // Update AC positions from current input values (CRITICAL FIX)
+  const xInputs = document.querySelectorAll('.ac-x');
+  const yInputs = document.querySelectorAll('.ac-y');
+  acPositions = [];
+  for (let i = 0; i < xInputs.length; i++) {
+    acPositions.push({
+      x: parseFloat(xInputs[i]?.value) || (i * roomW / (xInputs.length + 1) + roomW / (xInputs.length + 1)),
+      y: parseFloat(yInputs[i]?.value) || roomL / 2,
+      temp: acTemp
+    });
+  }
+
+  const sources = [...acPositions];
+  
+  const cols = Math.ceil(roomW / gridScale);
+  const rows = Math.ceil(roomL / gridScale);
+  
+  // Window heat sources
+  if (windows.north) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: 0, temp: outdoorTemp - 2 }); }
+  if (windows.south) { for (let c = 0; c < cols; c += 2) sources.push({ x: c * gridScale + gridScale/2, y: roomL, temp: outdoorTemp - 2 }); }
+  if (windows.east) { for (let r = 0; r < rows; r += 2) sources.push({ x: roomW, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
+  if (windows.west) { for (let r = 0; r < rows; r += 2) sources.push({ x: 0, y: r * gridScale + gridScale/2, temp: outdoorTemp - 2 }); }
+
+  const bodyHeat = 0.5 + (studentCount / (cols * rows)) * 2;
+
+  // Recompute grid with new parameters
+  gridData = [];
+  let totalTemp = 0, maxTemp = -999, minTemp = 999, totalPMV = 0, hotCount = 0, comfortCount = 0;
+  const totalCells = rows * cols;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const px = c * gridScale + gridScale / 2;
+      const py = r * gridScale + gridScale / 2;
+      
+      let temp = computeIDW(px, py, sources);
+      temp += bodyHeat;
+      
+      let airflow = 0.05;
+      for (const ac of acPositions) {
+        const dist = Math.sqrt((px - ac.x) ** 2 + (py - ac.y) ** 2);
+        airflow += Math.max(0, 1.5 - dist * 0.2);
+      }
+      airflow = Math.min(airflow, 2.0);
+      
+      const tr = temp + (isNearWindow(c, r, cols, rows) ? 3 : 0);
+      const pmv = computePMV(temp, tr, airflow, humidity, 1.1, 0.5);
+      
+      gridData.push({ r, c, px, py, temp, pmv, airflow });
+      
+      totalTemp += temp;
+      maxTemp = Math.max(maxTemp, temp);
+      minTemp = Math.min(minTemp, temp);
+      totalPMV += pmv;
+      if (pmv > 2) hotCount++;
+      if (Math.abs(pmv) <= 1) comfortCount++;
+    }
+  }
+
+  // Re-render grid and update all stats
+  renderGrid(rows, cols);
+  updateStats(totalTemp / totalCells, maxTemp, minTemp, totalPMV / totalCells, hotCount / totalCells * 100, comfortCount / totalCells * 100);
+}
+
+function generateRecommendations() {
+  const list = document.getElementById('recommendations-list');
+  const recs = [];
+  
+  const cols = Math.ceil(roomW / gridScale);
+  const rows = Math.ceil(roomL / gridScale);
+  
+  // Find hotspots
+  const hotspots = gridData.filter(c => c.pmv > 2);
+  const deadAir = gridData.filter(c => c.airflow < 0.15 && c.pmv > 1);
+  const windowHeat = gridData.filter(c => isNearWindow(c.c, c.r, cols, rows) && c.pmv > 1.5);
+
+  if (windowHeat.length > 0) {
+    recs.push({
+      icon: '☀️',
+      title: 'ปัญหา: รังสีความร้อนจากหน้าต่าง',
+      severity: 'high',
+      detail: `พบ ${windowHeat.length} พิกัดริมหน้าต่างที่มี PMV > +1.5 (อุณหภูมิเฉลี่ย ${(windowHeat.reduce((s,c)=>s+c.temp,0)/windowHeat.length).toFixed(1)}°C)`,
+      solutions: [
+        'ติดตั้งผ้าม่านทึบแสงหรือมู่ลี่สะท้อนความร้อนในช่วง 11:00-15:00 น.',
+        'พิจารณาติดฟิล์มกรองแสง IR-Rejection Film เพื่อลดรังสีอินฟราเรดลง 40-60%',
+        'ย้ายโต๊ะเรียนแถวริมหน้าต่างห่างออกอย่างน้อย 1-1.5 เมตร',
+        'ปลูกต้นไม้ร่มเงาภายนอกหน้าต่าง (Long-term solution)'
+      ]
+    });
+  }
+
+  if (deadAir.length > 0) {
+    recs.push({
+      icon: '🌬️',
+      title: 'ปัญหา: จุดอับลม (Dead Air Zone)',
+      severity: 'medium',
+      detail: `พบ ${deadAir.length} พิกัดที่ความเร็วลมต่ำกว่า 0.15 m/s ทำให้ความร้อนสะสม`,
+      solutions: [
+        'ปรับองศาใบสวิง (Swing Louver) ของแอร์ที่ใกล้ที่สุดลง 10-15°',
+        'ติดตั้งพัดลมหมุนเวียนอากาศ (Air Circulator) ที่จุดอับลม',
+        'เปิดช่องทางลม (Airflow Path) โดยจัดโต๊ะเรียนให้มีช่องว่างกลาง',
+        'พิจารณาเพิ่มความเร็วพัดลมแอร์ (Fan Speed) ขึ้น 1 ระดับ'
+      ]
+    });
+  }
+
+  if (hotspots.length > 3) {
+    recs.push({
+      icon: '🔥',
+      title: 'ปัญหา: ความร้อนสะสมสูงผิดปกติ',
+      severity: 'high',
+      detail: `พบ ${hotspots.length} พิกัด (${(hotspots.length/gridData.length*100).toFixed(0)}%) ที่ PMV > +2.0 — นักเรียนรู้สึกร้อนชัดเจน`,
+      solutions: [
+        'ลดอุณหภูมิตั้งแอร์ลง 1-2°C (ตรวจสอบจาก Sandbox Simulation)',
+        'กระจายโต๊ะเรียนออกจากกลุ่มหนาแน่นไปยังโซนสีเขียว (PMV ≤ 1)',
+        'เพิ่มเครื่องปรับอากาศ 1 ตัวในจุดที่ห่างจากแอร์เดิมมากที่สุด',
+        'ติดตั้งฉนวนกันความร้อนที่ฝ้าเพดาน (โดยเฉพาะหากชั้นบนมีดาดฟ้ารับแดด)'
+      ]
+    });
+  }
+
+  const avgPMV = gridData.reduce((s,c) => s + c.pmv, 0) / gridData.length;
+  if (avgPMV > 1) {
+    recs.push({
+      icon: '📊',
+      title: 'ภาพรวม: ค่า PMV เฉลี่ยสูงกว่ามาตรฐานสบาย',
+      severity: 'medium',
+      detail: `PMV เฉลี่ย = ${avgPMV.toFixed(2)} (มาตรฐาน ASHRAE 55 กำหนดว่าค่าที่ดีควรอยู่ระหว่าง -0.5 ถึง +0.5)`,
+      solutions: [
+        'ตรวจสอบค่า BTU ของแอร์ว่าเพียงพอต่อพื้นที่ (แนะนำ ≥ 600 BTU/m²)',
+        `ห้องขนาด ${(roomW*roomL).toFixed(0)} m² ต้องการอย่างน้อย ${Math.ceil(roomW*roomL*600/12000)} ตัน (${Math.ceil(roomW*roomL*600)} BTU)`,
+        'ลดแหล่งกำเนิดความร้อนภายใน เช่น ปิดไฟที่ไม่จำเป็น เปลี่ยนเป็น LED',
+        'พิจารณาติดตั้งระบบระบายอากาศ (Ventilation) เพิ่มเติม'
+      ]
+    });
+  }
+
+  if (recs.length === 0) {
+    recs.push({
+      icon: '✅',
+      title: 'ผลวิเคราะห์: ห้องเรียนอยู่ในเกณฑ์ดี',
+      severity: 'low',
+      detail: 'ค่า PMV อยู่ในช่วงสบาย ไม่พบจุดวิกฤตที่ต้องแก้ไขเร่งด่วน',
+      solutions: ['รักษาการตั้งค่าปัจจุบัน และตรวจสอบเป็นระยะในช่วงเวลาที่แดดจัด']
+    });
+  }
+
+  list.innerHTML = recs.map(rec => {
+    const severityColors = { high: 'border-red-500 bg-red-500/5', medium: 'border-yellow-500 bg-yellow-500/5', low: 'border-green-500 bg-green-500/5' };
+    return `
+      <div class="border-l-4 ${severityColors[rec.severity]} rounded-r-lg p-4 fade-in">
+        <h3 class="font-bold text-sm text-white mb-1">${rec.icon} ${rec.title}</h3>
+        <p class="text-xs text-gray-400 mb-3 mono">${rec.detail}</p>
+        <h4 class="text-xs font-semibold text-cyan-400 mb-2">🔹 แนวทางแก้ไข:</h4>
+        <ul class="space-y-1">
+          ${rec.solutions.map(s => `<li class="text-xs text-gray-300 flex items-start gap-2"><span class="text-green-400 mt-0.5">•</span>${s}</li>`).join('')}
+        </ul>
+      </div>`;
+  }).join('');
+}
+
+// Init
+lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a0ca679181f73e68',t:'MTc4MTYxOTA5NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
